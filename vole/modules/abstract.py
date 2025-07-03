@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class Module(ABC):
     """
-    Declares properties of and a method for executing a module
+    Declares properties and methods for executing a module
     """
 
     @property
@@ -21,6 +21,14 @@ class Module(ABC):
     def description(self):
         pass
 
+    @abstractmethod
+    def set_project(self, project):
+        pass
+
+    @abstractmethod
+    def set_CFG(self, project):
+        pass
+    
     @abstractmethod
     def execute(self) -> None:
         pass
