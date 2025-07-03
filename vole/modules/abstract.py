@@ -28,7 +28,7 @@ class Module(ABC):
     @abstractmethod
     def set_CFG(self, project):
         pass
-    
+
     @abstractmethod
     def execute(self) -> None:
         pass
