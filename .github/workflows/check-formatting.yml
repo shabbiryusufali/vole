@@ -11,6 +11,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check code formatting
+      - name: Get ruff
         uses: astral-sh/ruff-action@v3
+
+      - name: Check code formatting
         run: ruff check
+
