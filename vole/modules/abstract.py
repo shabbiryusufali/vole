@@ -1,10 +1,25 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 
-class Module:
+class Module(ABC):
     """
-    Declares a method for executing a module
+    Declares properties of and a method for executing a module
     """
+
+    @property
+    @abstractmethod
+    def cwe_id(self):
+        pass
+
+    @property
+    @abstractmethod
+    def cwe_name(self):
+        pass
+
+    @property
+    @abstractmethod
+    def description(self):
+        pass
 
     @abstractmethod
     def execute(self) -> None:
