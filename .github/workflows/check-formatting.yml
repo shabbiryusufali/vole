@@ -1,0 +1,16 @@
+name: Check Formatting
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check code formatting
+        uses: astral-sh/ruff-action@v3
+        run: ruff check
