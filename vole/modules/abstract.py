@@ -30,5 +30,5 @@ class Module(ABC):
         pass
 
     @abstractmethod
-    def execute(self) -> None:
+    def execute(self):
         pass
