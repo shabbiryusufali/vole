@@ -1,51 +1,12 @@
-import argparse
 import logging
-import pathlib
 
 from angr import Project
+
+from cli import parse, log_levels
 from modules import modules
 
 
 logger = logging.getLogger(__name__)
-log_levels = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "critical": logging.CRITICAL,
-}
-
-
-def parse() -> dict:
-    parser = argparse.ArgumentParser(
-        prog="vole.py",
-        description="""
-            Vulnerability Observance and Learning-based Exploitation (VOLE)
-            is a tool for detecting important CWEs in program binaries
-        """,
-    )
-
-    # Positional
-    parser.add_argument("binary", type=pathlib.Path)
-
-    # Options
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=pathlib.Path,
-        default="./output",
-        help="Where to output the results",
-    )
-    parser.add_argument(
-        "-vvv",
-        "--verbosity",
-        type=str,
-        default="info",
-        choices=list(log_levels.keys()),
-        help="How much log detail to output",
-    )
-
-    return vars(parser.parse_args())
 
 
 def main():
