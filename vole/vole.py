@@ -64,8 +64,8 @@ def main():
     for idx, module in enumerate(modules):
         logger.info(f"Running module {idx + 1}/{len(modules)}")
 
-        module.set_project()
-        module.set_CFG()
+        module.set_project(project)
+        module.set_CFG(cfg)
 
         warning = module.execute()
         warnings.append(warning)
