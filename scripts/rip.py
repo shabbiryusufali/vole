@@ -24,6 +24,11 @@ def lift_blocks(func: angr.knowledge_plugins.functions.Function) -> str:
     return "\n".join([str(block.vex) for block in func.blocks])
 
 
+def write_ir(dest: pathlib.Path, text: str) -> None:
+    with open(dest, "w") as f:
+        f.write(text)
+
+
 def lift(cwe_id: str, file: pathlib.Path) -> None:
     """
     Resolves external symbols from main binary and lifts corresponding VEX IR
@@ -56,43 +61,49 @@ def lift(cwe_id: str, file: pathlib.Path) -> None:
                         continue
 
                     # TODO: Resolve translation error with certain nested functions
-                    try:
-                        if (
-                            temp_func.name.endswith("good")
-                            and "good" in nested_func.name
-                        ):
-                            name = f"{temp_func.name[:-4]}{nested_func.name}"
-                            func_ir[name] = lift_blocks(nested_func)
+                    if temp_func.name.endswith("good") and "good" in nested_func.name:
+                        name = f"{temp_func.name[:-4]}{nested_func.name}"
+
+                        try:
+                            write_ir(
+                                f"{file.parent}/{name}.txt", lift_blocks(nested_func)
+                            )
+                        except angr.errors.SimTranslationError as e:
+                            print(e)
+                            continue
+                        else:
                             wrapper = True
 
-                        elif (
-                            temp_func.name.endswith("bad") and "bad" in nested_func.name
-                        ):
-                            name = f"{temp_func.name[:-3]}{nested_func.name}"
-                            func_ir[name] = lift_blocks(nested_func)
+                    elif temp_func.name.endswith("bad") and "bad" in nested_func.name:
+                        try:
+                            write_ir(
+                                f"{file.parent}/{name}.txt", lift_blocks(nested_func)
+                            )
+                        except angr.errors.SimTranslationError as e:
+                            print(e)
+                            continue
+                        else:
                             wrapper = True
-                    except angr.errors.SimTranslationError:
-                        continue
 
                 if not wrapper:
-                    func_ir[sym.name] = lift_blocks(temp_func)
+                    try:
+                        write_ir(
+                            f"{file.parent}/{sym.name}.txt", lift_blocks(nested_func)
+                        )
+                    except angr.errors.SimTranslationError as e:
+                        print(e)
 
-    # Write IR to file
-    for func, ir in func_ir.items():
-        if ir:
-            with open(f"{file.parent}/{func}.txt", "w") as f:
-                f.write(ir)
 
-
-def find_main(cwe_id: str, path: str) -> pathlib.Path:
+def find_mains(cwe_id: str, path: str) -> Generator[pathlib.Path]:
     """
-    Returns the path to `main_linux.o` in `path` that matches `cwe_id`
+    Generator that yields `main_linux.o` in `path` that match `cwe_id`
     """
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
     pattern = f"{cwe_id}*/**/main_linux.o"
-    main_dir = list(path.rglob(pattern))[0]
-    return main_dir
+
+    for main in path.rglob(pattern):
+        yield main
 
 
 def main():
@@ -100,8 +111,8 @@ def main():
         print(f"Usage: python rip.py [CWE-ID] [PATH]")
         sys.exit()
 
-    main = find_main(sys.argv[1], sys.argv[2])
-    lift(sys.argv[1], main)
+    for main in find_mains(sys.argv[1], sys.argv[2]):
+        lift(sys.argv[1], main)
 
 
 if __name__ == "__main__":

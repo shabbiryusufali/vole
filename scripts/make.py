@@ -10,8 +10,9 @@ def make(cwe_id: str, path: str) -> None:
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
     pattern = f"{cwe_id}*/**/Makefile"
-    makedir = list(path.rglob(pattern))[0].parent
-    subprocess.run(["make", "-C", makedir])
+
+    for makedir in path.rglob(pattern):
+        subprocess.run(["make", "-C", makedir.parent])
 
 
 def clean(cwe_id: str, path: str) -> None:
@@ -21,12 +22,13 @@ def clean(cwe_id: str, path: str) -> None:
     """
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
-    pattern = f"{cwe_id}*/**/Makefile"
-    makedir = list(path.rglob(pattern))[0].parent
-    subprocess.run(["make", "clean", "-C", makedir])
+    makefile_pattern = f"{cwe_id}*/**/Makefile"
+    txt_pattern = f"{cwe_id}*/**/{cwe_id}*.txt"
 
-    pattern = f"{cwe_id}*/**/{cwe_id}*.txt"
-    for txt in path.rglob(pattern):
+    for makefile in path.rglob(makefile_pattern):
+        subprocess.run(["make", "clean", "-C", makefile.parent])
+
+    for txt in path.rglob(txt_pattern):
         txt.unlink(missing_ok=True)
 
 
