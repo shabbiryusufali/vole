@@ -108,7 +108,7 @@ def find_mains(cwe_id: str, path: str) -> Generator[pathlib.Path]:
 
 def main():
     if len(sys.argv) != 3:
-        print(f"Usage: python rip.py [CWE-ID] [PATH]")
+        print("Usage: python rip.py [CWE-ID] [PATH]")
         sys.exit()
 
     for main in find_mains(sys.argv[1], sys.argv[2]):
