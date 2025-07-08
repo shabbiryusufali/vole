@@ -16,7 +16,7 @@
 2. Download the latest precompiled binary for your platform
 3. Extract the binary from the archive (`tar xz <pypy-version>.tar.bz2`)
 4. Add a symlink from `/usr/local/bin/pypy` to `path/to/pypy-version/bin/pypy` (`ln -s path/to/pypy-version/bin/pypy /usr/local/bin/pypy`)
-  1. Alternatively, add PyPy to `PATH` by modifying `~/.bashrc` (`export PATH="$PATH:$HOME/bin/pypy-version/bin"`)
+  1. Alternatively, add PyPy to `PATH` by modifying `~/.bashrc` (`export PATH="$PATH:path/to/pypy-version/bin"`)
 
 #### 2. Rust
 
