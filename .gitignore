@@ -1,6 +1,9 @@
 # Our virtual environment
 venv/
 
+# The SARD dataset itself (it's rather large!)
+data/SARD/**
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
