@@ -2,8 +2,10 @@ import sys
 import angr
 import pathlib
 
+from collections.abc import Generator
 
-def crawl(cwe_id: str, path: str):
+
+def crawl(cwe_id: str, path: str) -> Generator[pathlib.Path]:
     """
     Generator that yields binaries in `path` that match `cwe_id`
     """
@@ -15,14 +17,14 @@ def crawl(cwe_id: str, path: str):
         yield file
 
 
-def lift_blocks(func: angr.knowledge_plugins.functions.Function):
+def lift_blocks(func: angr.knowledge_plugins.functions.Function) -> str:
     """
     Lifts VEX IR from the basic blocks of a `func`
     """
     return "\n".join([str(block.vex) for block in func.blocks])
 
 
-def lift(cwe_id: str, file: pathlib.Path):
+def lift(cwe_id: str, file: pathlib.Path) -> None:
     """
     Resolves external symbols from main binary and lifts corresponding VEX IR
     """

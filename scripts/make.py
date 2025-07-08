@@ -3,7 +3,7 @@ import pathlib
 import subprocess
 
 
-def make(cwe_id: str, path: str):
+def make(cwe_id: str, path: str) -> None:
     """
     Makes the test cases in the subdirectory of `path` corresponding to `cwe_id`
     """
@@ -14,7 +14,7 @@ def make(cwe_id: str, path: str):
     subprocess.run(["make", "-C", makedir])
 
 
-def clean(cwe_id: str, path: str):
+def clean(cwe_id: str, path: str) -> None:
     """
     Invokes `make clean` in the subdirectory of `path` corresponding to `cwe_id`
     Also cleans up `.txt` files created by `rip.py`
