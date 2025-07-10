@@ -1,8 +1,8 @@
 # Our virtual environment
 venv/
 
-# The SARD dataset itself (it's rather large!)
-data/SARD/**
+# Ignore the SARD dataset itself but not the download script!
+data/SARD/[!download.sh]**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
