@@ -5,105 +5,68 @@ import pathlib
 from collections.abc import Generator
 
 
-def crawl(cwe_id: str, path: str) -> Generator[pathlib.Path]:
+def crawl(path: pathlib.Path, pattern: str) -> Generator[pathlib.Path]:
     """
-    Generator that yields binaries in `path` that match `cwe_id`
+    Generator that yields `pathlib.Path`s in `path` that match `pattern`
     """
-    cwe_id = cwe_id.upper()
-    path = pathlib.Path(path)
-    pattern = f"**/{cwe_id}*.o"
-
     for file in path.rglob(pattern):
         yield file
 
 
 def lift_blocks(func: angr.knowledge_plugins.functions.Function) -> str:
     """
-    Lifts VEX IR from the basic blocks of a `func`
+    Lifts VEX IR from the basic blocks of a `func` as a `str`
     """
     return "\n".join([str(block.vex) for block in func.blocks])
-
-
-def write_ir(dest: pathlib.Path, text: str) -> None:
-    with open(dest, "w") as f:
-        f.write(text)
 
 
 def lift(cwe_id: str, file: pathlib.Path) -> None:
     """
     Resolves external symbols from main binary and lifts corresponding VEX IR
     """
-    proj = angr.Project(file, auto_load_libs=False)
-    func_ir = {}  # (function name, IR) pairs
 
     # Find extern symbols matching `cwe_id` to lift
-    for sym in proj.loader.main_object.imports:
-        if sym.startswith(cwe_id.upper()):
-            func_ir[sym] = None
+    project = angr.Project(file, auto_load_libs=False)
+    imports = project.loader.main_object.imports
+    symbols = [s for s in imports if cwe_id.upper() in s]
 
     # Load each source binary
-    for o in crawl(cwe_id, file.parent):
-        temp_proj = angr.Project(o, auto_load_libs=False)
-        temp_cfg = temp_proj.analyses.CFGFast()
+    for o in crawl(file.parent, f"**/{cwe_id}*.o"):
+        src_proj = angr.Project(o, auto_load_libs=False)
+        src_cfg = src_proj.analyses.CFGFast()
 
         # Resolve symbols
-        for sym in temp_proj.loader.main_object.symbols:
-            if sym.is_function and sym.name in func_ir.keys():
-                temp_func = temp_cfg.functions[sym.name]
+        for sym in src_proj.loader.main_object.symbols:
+            # Ignore non-functions
+            if not sym.is_function:
+                continue
 
-                # Detect wrappers
-                wrapper = False
-                for call in temp_func.get_call_sites():
-                    call_target = temp_func.get_call_target(call)
-                    nested_func = temp_cfg.functions[call_target]
+            # Ignore functions not invoked by the main binary
+            if sym.name not in symbols:
+                continue
 
-                    if nested_func.name in func_ir.keys():
-                        continue
+            src_func = src_cfg.functions.get(sym.name)
+            has_nested_funcs = False
 
-                    # TODO: Resolve translation error with certain nested functions
-                    if temp_func.name.endswith("good") and "good" in nested_func.name:
-                        name = f"{temp_func.name[:-4]}{nested_func.name}"
+            # Resolve called functions (which may contain the code we want)
+            for call in src_func.get_call_sites():
+                call_target = src_func.get_call_target(call)
+                nested_func = src_cfg.functions[call_target]
 
-                        try:
-                            write_ir(
-                                f"{file.parent}/{name}.txt", lift_blocks(nested_func)
-                            )
-                        except angr.errors.SimTranslationError as e:
-                            print(e)
-                            continue
-                        else:
-                            wrapper = True
+                if cwe_id.upper() in nested_func.name:
+                    has_nested_funcs = True
 
-                    elif temp_func.name.endswith("bad") and "bad" in nested_func.name:
-                        try:
-                            write_ir(
-                                f"{file.parent}/{name}.txt", lift_blocks(nested_func)
-                            )
-                        except angr.errors.SimTranslationError as e:
-                            print(e)
-                            continue
-                        else:
-                            wrapper = True
-
-                if not wrapper:
                     try:
-                        write_ir(
-                            f"{file.parent}/{sym.name}.txt", lift_blocks(nested_func)
-                        )
-                    except angr.errors.SimTranslationError as e:
-                        print(e)
+                        with open(
+                            f"{file.parent}/{file.stem}_{nested_func.name}.txt", "w"
+                        ) as f:
+                            f.write(lift_blocks(nested_func))
+                    except angr.errors.SimTranslationError:
+                        print(f"Failed to translate {nested_func.name}")
 
-
-def find_mains(cwe_id: str, path: str) -> Generator[pathlib.Path]:
-    """
-    Generator that yields `main_linux.o` in `path` that match `cwe_id`
-    """
-    cwe_id = cwe_id.upper()
-    path = pathlib.Path(path)
-    pattern = f"{cwe_id}*/**/main_linux.o"
-
-    for main in path.rglob(pattern):
-        yield main
+            if not has_nested_funcs:
+                with open(f"{file.parent}/{file.stem}_{src_func.name}.txt", "w") as f:
+                    f.write(lift_blocks(src_func))
 
 
 def main():
@@ -111,8 +74,11 @@ def main():
         print("Usage: python rip.py [CWE-ID] [PATH]")
         sys.exit()
 
-    for main in find_mains(sys.argv[1], sys.argv[2]):
-        lift(sys.argv[1], main)
+    cwe_id = sys.argv[1]
+    path = pathlib.Path(sys.argv[2])
+
+    for m in crawl(path, f"{cwe_id}*/**/main_linux.o"):
+        lift(cwe_id, m)
 
 
 if __name__ == "__main__":
