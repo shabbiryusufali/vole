@@ -23,7 +23,7 @@ def clean(cwe_id: str, path: str) -> None:
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
     makefile_pattern = f"{cwe_id}*/**/Makefile"
-    txt_pattern = f"{cwe_id}*/**/{cwe_id}*.txt"
+    txt_pattern = f"{cwe_id}*/**/*{cwe_id}*.txt"
 
     for makefile in path.rglob(makefile_pattern):
         subprocess.run(["make", "clean", "-C", makefile.parent])
