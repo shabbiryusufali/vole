@@ -40,6 +40,12 @@ pypy -m ensurepip
 pypy -m pip install -r requirements.txt
 ```
 
+#### 4. Acquiring Training Data
+
+1. Run `./data/SARD/download.sh`
+2. Compile the target CWEs by CWE-ID by running `python scripts/make.py <CWE-ID> data/SARD` where `<CWE-ID>` is the literal string "CWE" followed by the numeric identifier (e.g. `CWE123`)
+3. Lift the IR for these target CWEs by CWE-ID by running `python scripts/rip.py <CWE-ID> data/SARD`
+
 ### Contributing Changes
 
 1. Before starting work, ensure your local repo is up to date!
