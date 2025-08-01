@@ -38,6 +38,7 @@ def lift(cwe_id: str, file: pathlib.Path) -> None:
             force_complete_scan=True,
             force_smart_scan=False,
             resolve_indirect_jumps=True,
+            normalize=True,
         )
 
         # The CFG contains a weakly connected component for each test case
@@ -45,12 +46,11 @@ def lift(cwe_id: str, file: pathlib.Path) -> None:
         wcc = networkx.weakly_connected_components(src_cfg.model.graph)
         sub_cfgs = [src_cfg.model.graph.subgraph(i).copy() for i in wcc]
 
-        """
-        TODO:
-        [ ] 1. Extract CFGs for tests cases invoked from wrapper functions
-        [ ] 2. Label resulting CFGs as "good" or "bad" (based on function name?)
-        [ ] 3. Serialize and store the results to disk
-        """
+        for cfg in sub_cfgs:
+            source = [n for n in cfg.nodes() if cfg.in_degree(n) == 0][0]
+
+            # [ ] TODO (optional): Convert subgraphs to instances of `CFGFast` (better for serialization)
+            # [ ] TODO: Serialize and save to disk
 
 
 def main():
