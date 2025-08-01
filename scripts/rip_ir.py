@@ -71,7 +71,7 @@ def lift(cwe_id: str, file: pathlib.Path) -> None:
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: python rip.py [CWE-ID] [PATH]")
+        print("Usage: python rip_ir.py [CWE-ID] [PATH]")
         sys.exit()
 
     cwe_id = sys.argv[1]
