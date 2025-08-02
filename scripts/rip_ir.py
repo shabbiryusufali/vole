@@ -1,8 +1,19 @@
 import sys
 import angr
+import logging
 import pathlib
 
 from collections.abc import Generator
+
+
+# Silence, fools
+# We know the symbol was allocated without a known size
+# And we can't do anything about it!
+logger = logging.getLogger("cle.backends.externs")
+logger.setLevel(logging.ERROR)
+
+logger = logging.getLogger("cle.loader")
+logger.setLevel(logging.ERROR)
 
 
 def crawl(path: pathlib.Path, pattern: str) -> Generator[pathlib.Path]:
