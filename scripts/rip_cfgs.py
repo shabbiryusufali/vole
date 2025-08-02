@@ -3,7 +3,6 @@ import angr
 import logging
 import pathlib
 import networkx
-import matplotlib
 
 from collections.abc import Generator
 
@@ -26,17 +25,7 @@ def crawl(path: pathlib.Path, pattern: str) -> Generator[pathlib.Path]:
         yield file
 
 
-def save_graph(graph: networkx.Graph, path: pathlib.Path) -> None:
-    """
-    Saves `graph` as a figure to `path`
-    NOTE: Useful for sanity checking purposes :)
-    """
-    networkx.draw(graph, with_labels=True, font_size=5)
-    matplotlib.pyplot.savefig(path)
-    matplotlib.pyplot.clf()
-
-
-def lift(cwe_id: str, file: pathlib.Path) -> None:
+def lift(cwe_id: str, file: pathlib.Path) -> Generator[networkx.DiGraph]:
     """
     Resolves subgraphs of CFG corresponding to test cases
     """
@@ -57,11 +46,8 @@ def lift(cwe_id: str, file: pathlib.Path) -> None:
         wcc = networkx.weakly_connected_components(src_cfg.model.graph)
         sub_cfgs = [src_cfg.model.graph.subgraph(i).copy() for i in wcc]
 
-        for cfg in sub_cfgs:
-            source = [n for n in cfg.nodes() if cfg.in_degree(n) == 0][0]
-
-            # [ ] TODO (optional): Convert subgraphs to instances of `CFGFast` (better for serialization)
-            # [ ] TODO: Serialize and save to disk
+        for sub_cfg in sub_cfgs:
+            yield sub_cfg
 
 
 def main():
@@ -73,7 +59,9 @@ def main():
     path = pathlib.Path(sys.argv[2])
 
     for m in crawl(path, f"{cwe_id}*/**/main_linux.o"):
-        lift(cwe_id, m)
+        for cfg in lift(cwe_id, m):
+            # TODO: What now?
+            continue
 
 
 if __name__ == "__main__":
