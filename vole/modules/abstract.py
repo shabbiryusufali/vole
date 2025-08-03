@@ -21,10 +21,10 @@ class Module(ABC):
     def description(self):
         pass
 
-    @abstractmethod
+    @classmethod
     def set_project(self, project):
-        pass
+        self.project = project
 
     @abstractmethod
-    def execute(self):
+    def execute(self) -> str:
         pass
