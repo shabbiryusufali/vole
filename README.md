@@ -8,6 +8,10 @@
 - [Rust](https://www.rust-lang.org/)
 - pip
 
+### Optional
+
+- Docker
+
 ### Installation and Setup
 
 #### 1. PyPy
@@ -42,9 +46,15 @@ pypy -m pip install -r requirements.txt
 
 #### 4. Acquiring Training Data
 
+> [!NOTE]
+> For consistent results, compile the training data with GCC 15.1
+> A Dockerfile has been supplied to ensure a reproducible environment
+
 1. Run `./data/SARD/download.sh`
-2. Compile the target CWEs by CWE-ID by running `python scripts/make.py <CWE-ID> data/SARD` where `<CWE-ID>` is the literal string "CWE" followed by the numeric identifier (e.g. `CWE123`)
-3. Lift the IR for these target CWEs by CWE-ID by running `python scripts/rip.py <CWE-ID> data/SARD`
+2. (Optional) Build the Docker image with `docker build -t vole-env:latest .`
+3. Compile the target CWEs per CWE-ID by running:
+  a. Bare metal: `python scripts/make.py <CWE-ID> data/SARD`
+  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env vole-env python3 scripts/make.py CWE<ID> data/SARD`
 
 ### Contributing Changes
 
