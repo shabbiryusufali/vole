@@ -6,6 +6,9 @@ class Module(ABC):
     Declares properties and methods for executing a module
     """
 
+    def __init__(self):
+        self.project = None
+
     @property
     @abstractmethod
     def cwe_id(self):
@@ -21,7 +24,6 @@ class Module(ABC):
     def description(self):
         pass
 
-    @classmethod
     def set_project(self, project):
         self.project = project
 
