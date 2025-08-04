@@ -13,13 +13,23 @@ from angr.knowledge_plugins.cfg import CFGNode
 from collections.abc import Iterator
 
 
-def lift_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
+def lift_block_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
     """
     Iterator that yields the IR of each `CFGNode` in `cfg`
     """
     for node in traverse_digraph(cfg):
         if node.block:
             yield (node, str(node.block.vex))
+
+
+def lift_stmt_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
+    """
+    Iterator that yields the IR of each `IRStmt` of each `CFGNode` in `cfg`
+    """
+    for node in traverse_digraph(cfg):
+        if node.block:
+            for stmt in node.block.vex.statements:
+                yield (node, str(stmt))
 
 
 def get_program_cfg(file: pathlib.Path):
@@ -52,7 +62,7 @@ def vectorize_node_ir(cfg: nx.DiGraph) -> None:
     """
     Converts the IR for each node in the `cfg` to a vector representation and inserts it into the node as an attribute
     """
-    node_attrs = {k: v for k, v in lift_ir(cfg)}
+    node_attrs = {k: v for k, v in lift_block_ir(cfg)}
 
     # TODO: Convert node_attrs.values() to vectors
     # NOTE: See utils/train.py

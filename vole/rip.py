@@ -4,7 +4,7 @@ import pathlib
 import argparse
 import networkx as nx
 
-from utils.cfg import lift_ir, get_program_cfg, get_sub_cfgs
+from utils.cfg import lift_block_ir, get_program_cfg, get_sub_cfgs
 from utils.graph import get_digraph_source_node
 from utils.io import crawl
 
@@ -28,7 +28,7 @@ def output_ir(cfg: nx.DiGraph, path: pathlib.Path) -> None:
         return
 
     with open(f"{path}/{source.name}.txt", "w") as f:
-        f.write("\n".join([ir for _, ir in lift_ir(cfg)]))
+        f.write("\n".join([ir for _, ir in lift_block_ir(cfg)]))
 
 
 def lift(
