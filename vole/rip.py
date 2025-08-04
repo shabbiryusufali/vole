@@ -4,13 +4,9 @@ import pathlib
 import argparse
 import networkx as nx
 
+from utils.cfg import lift_ir, get_program_cfg, get_sub_cfgs
+from utils.graph import get_digraph_source_node
 from utils.io import crawl
-from utils.graph import (
-    extract_subgraphs,
-    get_digraph_source_node,
-    normalize_edge_attributes,
-    traverse_digraph,
-)
 
 from collections.abc import Iterator
 
@@ -31,12 +27,8 @@ def output_ir(cfg: nx.DiGraph, path: pathlib.Path) -> None:
     if not source:
         return
 
-    ir = "\n".join(
-        [str(node.block.vex) for node in traverse_digraph(cfg) if node.block]
-    )
-
     with open(f"{path}/{source.name}.txt", "w") as f:
-        f.write(ir)
+        f.write("\n".join([ir for _, ir in lift_ir(cfg)]))
 
 
 def lift(
@@ -57,19 +49,8 @@ def lift(
     """
     # Load each source binary
     for o in crawl(file.parent, f"**/{cwe_id}*.o"):
-        # Generate CFG for entire binary
-        src_proj = angr.Project(o, auto_load_libs=False)
-        src_cfg = src_proj.analyses.CFGFast(
-            # Force complete scan to get as much information as possible
-            force_complete_scan=True,
-            force_smart_scan=False,
-            resolve_indirect_jumps=True,
-            normalize=True,
-        )
-
-        for sub_cfg in extract_subgraphs(src_cfg.model.graph):
-            normalize_edge_attributes(sub_cfg)
-
+        cfg = get_program_cfg(o)
+        for sub_cfg in get_sub_cfgs(cfg):
             if should_output_ir:
                 output_ir(sub_cfg, file.parent)
 
