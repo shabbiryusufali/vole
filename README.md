@@ -53,8 +53,8 @@ pypy -m pip install -r requirements.txt
 1. Run `./data/SARD/download.sh`
 2. (Optional) Build the Docker image with `docker build -t vole-env:latest .`
 3. Compile the target CWEs per CWE-ID by running:
-  a. Bare metal: `python scripts/make.py <CWE-ID> data/SARD`
-  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env vole-env python3 scripts/make.py CWE<ID> data/SARD`
+  a. Bare metal: `python vole/make.py <CWE-ID> data/SARD`
+  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env vole-env python3 vole/make.py CWE<ID> data/SARD`
 
 ### Contributing Changes
 
