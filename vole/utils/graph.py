@@ -14,7 +14,7 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_node(graph: nx.DiGraph):
+def get_digraph_source_node(graph: nx.DiGraph) -> any:
     """
     Returns the source of `graph` if it exists
     Each CFG is expected to have at most one source
@@ -25,7 +25,7 @@ def get_digraph_source_node(graph: nx.DiGraph):
     return sources[0] if sources else None
 
 
-def traverse_digraph(graph: nx.DiGraph) -> Iterator:
+def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
     """
     Iterator that yields nodes in `graph`
     """
@@ -75,3 +75,14 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         # NOTE: CWE-703!
         # TODO: Handle this in a less hacky fashion
         pass  # nosec B110
+
+
+def insert_node_attributes(
+    graph: nx.Graph, attr_key: str, attrs: dict[any, any]
+) -> None:
+    """
+    Inserts `attrs` for each corresponding node in the `graph`
+    """
+    for node in graph.nodes():
+        attr_val = attrs.get(node, None)
+        nx.set_node_attributes(graph, {node: {attr_key: attr_val}})
