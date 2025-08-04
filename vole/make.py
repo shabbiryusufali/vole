@@ -1,5 +1,5 @@
-import sys
 import pathlib
+import argparse
 import subprocess
 
 
@@ -23,7 +23,7 @@ def clean(cwe_id: str, path: str) -> None:
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
     makefile_pattern = f"{cwe_id}*/**/Makefile"
-    txt_pattern = f"{cwe_id}*/**/*{cwe_id}*.txt"
+    txt_pattern = f"{cwe_id}*/**/*.txt"
 
     for makefile in path.rglob(makefile_pattern):
         subprocess.run(["make", "clean", "-C", makefile.parent])
@@ -32,16 +32,37 @@ def clean(cwe_id: str, path: str) -> None:
         txt.unlink(missing_ok=True)
 
 
-def main():
-    if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("Usage: python make.py [CWE-ID] [PATH] {clean}")
-        sys.exit()
+def parse() -> dict:
+    parser = argparse.ArgumentParser(
+        prog="make.py",
+        description="""
+            Compiles SARD test cases
+        """,
+    )
 
-    if len(sys.argv) == 3:
-        make(sys.argv[1], sys.argv[2])
-    elif len(sys.argv) == 4:
-        if sys.argv[3] == "clean":
-            clean(sys.argv[1], sys.argv[2])
+    parser.add_argument("CWE-ID", type=str)
+    parser.add_argument("path", type=pathlib.Path)
+    parser.add_argument(
+        "-c",
+        "--clean",
+        action="store_true",
+        help="Whether or not to clean the compiled test cases and IR produced by `rip.py`",
+    )
+
+    return vars(parser.parse_args())
+
+
+def main():
+    args = parse()
+
+    cwe_id = args.get("CWE-ID")
+    path = args.get("path")
+    should_clean = args.get("clean")
+
+    if should_clean:
+        clean(cwe_id, path)
+    else:
+        make(cwe_id, path)
 
 
 if __name__ == "__main__":
