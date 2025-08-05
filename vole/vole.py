@@ -16,7 +16,6 @@ def main():
 
     # Configure project and generate CFG
     project = Project(args.get("binary"), auto_load_libs=False)
-    cfg = project.analyses.CFGFast()
     warnings = []
 
     # Run each module and collect warnings
@@ -24,7 +23,6 @@ def main():
         logger.info(f"Running module {idx + 1}/{len(modules)}")
 
         module.set_project(project)
-        module.set_CFG(cfg)
 
         warning = module.execute()
         warnings.append(warning)

@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def prepare_training_data(split: list[pathlib.Path]) -> list:
-    training_data = []
+def prepare_data_for_split(split: list[pathlib.Path]) -> list:
+    split_data = []
 
     for idx, path in enumerate(split):
         cfg = get_program_cfg(path)
@@ -48,9 +48,9 @@ def prepare_training_data(split: list[pathlib.Path]) -> list:
                 insert_node_attributes(sub_cfg, {node: {"label": label}})
                 insert_node_attributes(sub_cfg, {node: {"ir_vec": stmts_vec}})
 
-            training_data.append(to_torch_data(sub_cfg))
+            split_data.append(to_torch_data(sub_cfg))
 
-    return training_data
+    return split_data
 
 
 def train_gcn(cwe_id: str, path: pathlib.Path):
@@ -70,8 +70,8 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     # TODO: Train GCN on `training_data`
     # possible model training code (i can't test it rn | model assuming graph level labelling)
-    training_data = prepare_training_data(train)
-    test_data = prepare_training_data(test)
+    training_data = prepare_data_for_split(train)
+    test_data = prepare_data_for_split(test)
 
     train_loader = DataLoader(training_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
