@@ -1,14 +1,16 @@
 import pathlib
-import numpy as np
 
+import numpy as np
 from utils.io import crawl
 
 
 def get_corpus_splits(cwe_id: str, path: pathlib.Path) -> tuple[list, list, list]:
     """
-    Reads in paths of test files from `path` corresponding to `cwe_id`, 
+    Reads in paths of test files from `path` corresponding to `cwe_id`,
     shuffles them, and returns a 45-45-10 train-test-eval split
     """
+    # TODO: Change split to 50-50?
+
     full = []
     for m in crawl(path, f"{cwe_id}*/**/main_linux.o"):
         for c in crawl(m.parent, f"**/{cwe_id}*.o"):
