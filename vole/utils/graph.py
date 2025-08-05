@@ -16,16 +16,13 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_node(graph: nx.DiGraph) -> any:
+def get_digraph_source_nodes(graph: nx.DiGraph) -> any:
     """
-    Returns the source of `graph` if it exists
-    Each CFG is expected to have at most one source
+    Returns the sources of `graph` if any exist
     """
-    sources = [
+    return [
         n for n in graph.nodes() if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
     ]
-    # return sources[0] if sources else None
-    return sources
 
 
 def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
@@ -37,71 +34,6 @@ def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
             yield neighbour
 
 
-def extract_subgraphs(graph: nx.Graph) -> list[nx.Graph]:
-    """
-    Extracts subgraphs of `graph` belonging to separate weakly connected components
-    NOTE: This is our best heuristic to identify CFGS of independent functions
-    """
-    wcc = [graph.subgraph(i).copy() for i in nx.weakly_connected_components(graph)]
-
-    if len(wcc) > 1:
-        return wcc
-
-    # NOTE: It seems that many of the test cases do not satisfy the weakly connected property
-    # TODO: Another heuristic for this???
-    # attempting to get subgraphs using function names (this doesn't care for called functions which might be an issue idk lol)
-
-
-    # NOTE: this is currently copying nodes, which means that 2 subgraphs will reference the same node, which could affect training with the same node having different labels that come from its subgraph. if we take the statement labelling approach this doesn't work. Independent subgraphs might be a better approach
-    source_nodes = get_digraph_source_node(graph)
-    
-    if len(source_nodes) < 2:
-        return wcc
-    
-    subgraphs = []
-
-    for source in source_nodes:
-
-        dfs_tree = nx.dfs_tree(graph, source=source)
-
-        reachable_nodes = set(dfs_tree.nodes())
-        subgraph_nodes = reachable_nodes
-        subgraph = graph.subgraph(subgraph_nodes).copy()
-
-        if len(subgraph.nodes()) > 0:
-            subgraphs.append(subgraph)
-
-    return subgraphs
-
-
-    # NOTE: left this in just cuz (more insertions :kekw:)
-
-    # function_groups = {}
-
-    # for node in graph.nodes():
-    #     func_name = get_function_name_from_node(node)
-    #     if func_name not in function_groups:
-    #         function_groups[func_name] = []
-    #     function_groups[func_name].append(node)
-
-    # if len(function_groups) > 1:
-    #     subgraphs = []
-    #     for func_name, nodes in function_groups.items():
-    #         if nodes:
-    #             subgraph = graph.subgraph(nodes).copy()
-    #             subgraphs.append(subgraph)
-    #     return subgraphs
-    # TODO: Remove this return once we decide
-    return wcc
-
-def get_function_name_from_node(node: any) -> str | None:
-
-    if hasattr(node, 'function') and node.function:
-        return node.function.name
-    elif hasattr(node, 'name') and node.name:
-        return node.name
-    return None
-
 def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes
@@ -111,25 +43,8 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
 
         for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
-            key_set = set(attrs.keys())
-
-            if key_set == edge_attrs:
-                continue
-
-            new_attrs = attrs
-
-            if len(key_set) < len(edge_attrs):
-                # Inserts a default value for the missing attribute
-                for diff in edge_attrs.difference(key_set):
-                    new_attrs[diff] = None
-
-            elif len(key_set) > len(edge_attrs):
-                # Removes the offending difference
-                # TODO: Shouldn't we instead correct `edge_attrs`?
-                for diff in key_set.difference(edge_attrs):
-                    del new_attrs[diff]
-
-            # Update edge with updated attributes
+            new_attrs = {key: attrs.get(key) for key in edge_attrs}
+            attrs.clear()
             nx.set_edge_attributes(graph, {(u, v): new_attrs})
 
     except StopIteration:

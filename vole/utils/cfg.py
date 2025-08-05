@@ -10,10 +10,7 @@ from angr.knowledge_plugins.cfg import CFGNode
 from angr.analyses.cfg import CFGFast
 from pyvex.stmt import AbiHint, IMark, IRStmt, NoOp
 
-from .graph import (
-    extract_subgraphs,
-    traverse_digraph,
-)
+from .graph import traverse_digraph, insert_node_attributes
 
 
 def lift_block_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
@@ -37,9 +34,11 @@ def lift_stmt_ir(cfg: nx.DiGraph) -> tuple[CFGNode, list[IRStmt] | None]:
         return isinstance(stmt, (AbiHint, IMark, NoOp))
 
     for node in cfg.nodes():
-        if node.block:
-            if node.block.vex.has_statements:
-                stmts = [s for s in node.block.vex.statements if not is_marker(s)]
+        block = cfg.nodes[node].get("block")
+
+        if block:
+            if block.vex.has_statements:
+                stmts = [s for s in block.vex.statements if not is_marker(s)]
                 yield (node, stmts)
             else:
                 yield (node, None)
@@ -67,8 +66,16 @@ def get_sub_cfgs(cfg: CFGFast) -> Iterator[nx.DiGraph]:
     """
     Iterator that yields a `nx.DiGraph` corresponding to a subgraph of `cfg`
     """
-    for sub_cfg in extract_subgraphs(cfg.model.graph):
-        yield sub_cfg
+
+    for func in cfg.kb.functions.values():
+        subgraph = func.transition_graph
+        if len(subgraph.edges()) > 0:
+            for node in subgraph:
+                cfgnode = cfg.model.get_any_node(node.addr)
+                insert_node_attributes(subgraph, {node: {"name": cfgnode.name}})
+                insert_node_attributes(subgraph, {node: {"block": cfgnode.block}})
+
+            yield subgraph
 
 
 def vectorize_stmt_ir(stmts: list[IRStmt] | None) -> list[list[int]]:
