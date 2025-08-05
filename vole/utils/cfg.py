@@ -1,16 +1,19 @@
-import angr
 import pathlib
+import sys
+from collections.abc import Iterator
+
+import angr
 import networkx as nx
+import torch
+import utils.model_OTA  # NOTE: MUST be imported this way
+from angr.knowledge_plugins.cfg import CFGNode
+from angr.analyses.cfg import CFGFast
+from pyvex.stmt import AbiHint, IMark, IRStmt, NoOp
 
 from .graph import (
-    traverse_digraph,
     extract_subgraphs,
-    normalize_edge_attributes,
-    insert_node_attributes,
+    traverse_digraph,
 )
-
-from angr.knowledge_plugins.cfg import CFGNode
-from collections.abc import Iterator
 
 
 def lift_block_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
@@ -22,17 +25,29 @@ def lift_block_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
             yield (node, str(node.block.vex))
 
 
-def lift_stmt_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
+def lift_stmt_ir(cfg: nx.DiGraph) -> tuple[CFGNode, list[IRStmt] | None]:
     """
     Iterator that yields the IR of each `IRStmt` of each `CFGNode` in `cfg`
     """
-    for node in traverse_digraph(cfg):
+
+    def is_marker(stmt: IRStmt) -> bool:
+        """
+        Checks if `stmt` is a non-semantical statement
+        """
+        return isinstance(stmt, (AbiHint, IMark, NoOp))
+
+    for node in cfg.nodes():
         if node.block:
-            for stmt in node.block.vex.statements:
-                yield (node, str(stmt))
+            if node.block.vex.has_statements:
+                stmts = [s for s in node.block.vex.statements if not is_marker(s)]
+                yield (node, stmts)
+            else:
+                yield (node, None)
+        else:
+            yield (node, None)
 
 
-def get_program_cfg(file: pathlib.Path):
+def get_program_cfg(file: pathlib.Path) -> CFGFast:
     """
     Returns the CFG of `file`
     """
@@ -48,23 +63,34 @@ def get_program_cfg(file: pathlib.Path):
     return cfg
 
 
-def get_sub_cfgs(cfg: nx.DiGraph) -> Iterator[nx.DiGraph]:
+def get_sub_cfgs(cfg: CFGFast) -> Iterator[nx.DiGraph]:
     """
     Iterator that yields a `nx.DiGraph` corresponding to a subgraph of `cfg`
     """
     for sub_cfg in extract_subgraphs(cfg.model.graph):
-        normalize_edge_attributes(sub_cfg)
-
         yield sub_cfg
 
 
-def vectorize_node_ir(cfg: nx.DiGraph) -> None:
+def vectorize_stmt_ir(stmts: list[IRStmt] | None) -> list[list[int]]:
     """
-    Converts the IR for each node in the `cfg` to a vector representation and inserts it into the node as an attribute
+    Converts the IR for each statement in `stmts` to a vector representation using VexIR2Vec
     """
-    node_attrs = {k: v for k, v in lift_block_ir(cfg)}
+    if not stmts:
+        return []
 
-    # TODO: Convert node_attrs.values() to vectors
-    # NOTE: See utils/train.py
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    here = pathlib.Path(__file__).parent.resolve()
+    model_path = pathlib.Path(here / "../models/vexir2vec.model")
 
-    insert_node_attributes(cfg, "ir_vec", node_attrs)
+    # Patch the resolution of the model's source at runtime
+    sys.modules["model_OTA"] = utils.model_OTA
+
+    # TODO: Figure out if it's possible to load the model with weights_only=True
+    vexir2vec = torch.load(model_path, map_location=device, weights_only=False)
+    vexir2vec.eval()
+
+    # TODO: Format each statement in `stmts` to be run in `vexir2vec`
+    # NOTE: For usage, see: https://github.com/IITH-Compilers/VexIR2Vec/blob/43538167644db81cbfda89716c113b483aa9fd06/experiments/diffing/v2v_diffing.py#L82-L344
+
+    # TODO: Return vector embeddings for each statement
+    return [1]
