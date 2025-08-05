@@ -48,10 +48,32 @@ def extract_subgraphs(graph: nx.Graph) -> list[nx.Graph]:
 
     # NOTE: It seems that many of the test cases do not satisfy the weakly connected property
     # TODO: Another heuristic for this???
+    # attempting to get subgraphs using function names (this doesn't care for called functions which might be an issue idk lol)
+    function_groups = {}
 
+    for node in graph.nodes():
+        func_name = get_function_name_from_node(node)
+        if func_name not in function_groups:
+            function_groups[func_name] = []
+        function_groups[func_name].append(node)
+
+    if len(function_groups) > 1:
+        subgraphs = []
+        for func_name, nodes in function_groups.items():
+            if nodes:
+                subgraph = graph.subgraph(nodes).copy()
+                subgraphs.append(subgraph)
+        return subgraphs
     # TODO: Remove this return once we decide
     return wcc
 
+def get_function_name_from_node(node: any) -> str | None:
+
+    if hasattr(node, 'function') and node.function:
+        return node.function.name
+    elif hasattr(node, 'name') and node.name:
+        return node.name
+    return None
 
 def normalize_edge_attributes(graph: nx.Graph) -> None:
     """

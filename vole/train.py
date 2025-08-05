@@ -1,6 +1,9 @@
 import logging
 import pathlib
 import argparse
+import torch
+from torch_geometric.nn import GCN
+from torch_geometric.loader import DataLoader
 
 from utils.cfg import get_program_cfg, get_sub_cfgs, lift_stmt_ir, vectorize_stmt_ir
 from utils.graph import get_digraph_source_node, insert_node_attributes, to_torch_data
@@ -30,9 +33,12 @@ def prepare_training_data(split: list[pathlib.Path]) -> list:
             if not source or not source.name:
                 label = -1 # Invalid
             elif "bad" in source.name:
-                label = 0 # Bad (i.e. vulnerable)
+                label = 1 # Bad (i.e. vulnerable)
             elif "good" in source.name:
-                label = 1 # Good
+                label = 0 # Good
+
+            if label == -1:
+                continue
 
             for node, stmts_ir in lift_stmt_ir(sub_cfg):
                 stmts_vec = vectorize_stmt_ir(stmts_ir)
@@ -62,10 +68,48 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
             """
         )
 
-    training_data = prepare_training_data(train)
-
     # TODO: Train GCN on `training_data`
+    # possible model training code (i can't test it rn | model assuming graph level labelling)
+    training_data = prepare_training_data(train)
+    test_data = prepare_training_data(test)
 
+    train_loader = DataLoader(training_data, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+
+    # in channels needs to be changed most likely
+    # out channels is 2 for binary classification
+    model = GCN(in_channels=training_data[0].num_features, out_channels=2, num_layers=3)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    model.train()
+    for epoch in range(100):
+        total_loss = 0
+        for batch in train_loader:
+            optimizer.zero_grad()
+
+            # might need to do pooling for graph level classification (GCN might handle it)
+            out = model(batch.x, batch.edge_index, batch.batch)
+            loss = criterion(out, batch.y.view(-1))
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in test_loader:
+            out = model(batch.x, batch.edge_index, batch.batch)
+            pred = out.argmax(dim=1)
+            correct += (pred == batch.y.view(-1)).sum().item()
+            total += batch.y.size(0)
+    print(f"Test Accuracy: {correct / total:.4f}")
+
+def save_model(model):
+    # TODO: save model one we have one for good accuracy to use in the actual tool
+    pass
 
 def parse() -> dict:
     parser = argparse.ArgumentParser(
