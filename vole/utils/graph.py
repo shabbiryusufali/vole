@@ -24,7 +24,8 @@ def get_digraph_source_node(graph: nx.DiGraph) -> any:
     sources = [
         n for n in graph.nodes() if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
     ]
-    return sources[0] if sources else None
+    # return sources[0] if sources else None
+    return sources
 
 
 def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
@@ -49,21 +50,47 @@ def extract_subgraphs(graph: nx.Graph) -> list[nx.Graph]:
     # NOTE: It seems that many of the test cases do not satisfy the weakly connected property
     # TODO: Another heuristic for this???
     # attempting to get subgraphs using function names (this doesn't care for called functions which might be an issue idk lol)
-    function_groups = {}
 
-    for node in graph.nodes():
-        func_name = get_function_name_from_node(node)
-        if func_name not in function_groups:
-            function_groups[func_name] = []
-        function_groups[func_name].append(node)
 
-    if len(function_groups) > 1:
-        subgraphs = []
-        for func_name, nodes in function_groups.items():
-            if nodes:
-                subgraph = graph.subgraph(nodes).copy()
-                subgraphs.append(subgraph)
-        return subgraphs
+    # NOTE: this is currently copying nodes, which means that 2 subgraphs will reference the same node, which could affect training with the same node having different labels that come from its subgraph. if we take the statement labelling approach this doesn't work. Independent subgraphs might be a better approach
+    source_nodes = get_digraph_source_node(graph)
+    
+    if len(source_nodes) < 2:
+        return wcc
+    
+    subgraphs = []
+
+    for source in source_nodes:
+
+        dfs_tree = nx.dfs_tree(graph, source=source)
+
+        reachable_nodes = set(dfs_tree.nodes())
+        subgraph_nodes = reachable_nodes
+        subgraph = graph.subgraph(subgraph_nodes).copy()
+
+        if len(subgraph.nodes()) > 0:
+            subgraphs.append(subgraph)
+
+    return subgraphs
+
+
+    # NOTE: left this in just cuz (more insertions :kekw:)
+
+    # function_groups = {}
+
+    # for node in graph.nodes():
+    #     func_name = get_function_name_from_node(node)
+    #     if func_name not in function_groups:
+    #         function_groups[func_name] = []
+    #     function_groups[func_name].append(node)
+
+    # if len(function_groups) > 1:
+    #     subgraphs = []
+    #     for func_name, nodes in function_groups.items():
+    #         if nodes:
+    #             subgraph = graph.subgraph(nodes).copy()
+    #             subgraphs.append(subgraph)
+    #     return subgraphs
     # TODO: Remove this return once we decide
     return wcc
 
