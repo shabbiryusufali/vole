@@ -16,15 +16,13 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_node(graph: nx.DiGraph) -> any:
+def get_digraph_source_nodes(graph: nx.DiGraph) -> any:
     """
-    Returns the source of `graph` if it exists
-    Each CFG is expected to have at most one source
+    Returns the sources of `graph` if any exist
     """
-    sources = [
+    return [
         n for n in graph.nodes() if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
     ]
-    return sources[0] if sources else None
 
 
 def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
@@ -36,23 +34,6 @@ def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
             yield neighbour
 
 
-def extract_subgraphs(graph: nx.Graph) -> list[nx.Graph]:
-    """
-    Extracts subgraphs of `graph` belonging to separate weakly connected components
-    NOTE: This is our best heuristic to identify CFGS of independent functions
-    """
-    wcc = [graph.subgraph(i).copy() for i in nx.weakly_connected_components(graph)]
-
-    if len(wcc) > 1:
-        return wcc
-
-    # NOTE: It seems that many of the test cases do not satisfy the weakly connected property
-    # TODO: Another heuristic for this???
-
-    # TODO: Remove this return once we decide
-    return wcc
-
-
 def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes
@@ -62,25 +43,8 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
 
         for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
-            key_set = set(attrs.keys())
-
-            if key_set == edge_attrs:
-                continue
-
-            new_attrs = attrs
-
-            if len(key_set) < len(edge_attrs):
-                # Inserts a default value for the missing attribute
-                for diff in edge_attrs.difference(key_set):
-                    new_attrs[diff] = None
-
-            elif len(key_set) > len(edge_attrs):
-                # Removes the offending difference
-                # TODO: Shouldn't we instead correct `edge_attrs`?
-                for diff in key_set.difference(edge_attrs):
-                    del new_attrs[diff]
-
-            # Update edge with updated attributes
+            new_attrs = {key: attrs.get(key) for key in edge_attrs}
+            attrs.clear()
             nx.set_edge_attributes(graph, {(u, v): new_attrs})
 
     except StopIteration:
