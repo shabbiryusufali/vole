@@ -1,8 +1,10 @@
 import pathlib
-import networkx as nx
-import matplotlib
-
 from collections.abc import Iterator
+
+import matplotlib
+import networkx as nx
+from torch_geometric.data import Data
+from torch_geometric.utils import convert
 
 
 def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
@@ -37,8 +39,18 @@ def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
 def extract_subgraphs(graph: nx.Graph) -> list[nx.Graph]:
     """
     Extracts subgraphs of `graph` belonging to separate weakly connected components
+    NOTE: This is our best heuristic to identify CFGS of independent functions
     """
-    return [graph.subgraph(i).copy() for i in nx.weakly_connected_components(graph)]
+    wcc = [graph.subgraph(i).copy() for i in nx.weakly_connected_components(graph)]
+
+    if len(wcc) > 1:
+        return wcc
+
+    # NOTE: It seems that many of the test cases do not satisfy the weakly connected property
+    # TODO: Another heuristic for this???
+
+    # TODO: Remove this return once we decide
+    return wcc
 
 
 def normalize_edge_attributes(graph: nx.Graph) -> None:
@@ -77,12 +89,21 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         pass  # nosec B110
 
 
-def insert_node_attributes(
-    graph: nx.Graph, attr_key: str, attrs: dict[any, any]
-) -> None:
+def insert_node_attributes(graph: nx.Graph, attrs: dict[any, dict[str, any]]) -> None:
     """
-    Inserts `attrs` for each corresponding node in the `graph`
+    Inserts `attrs` into `graph
+    NOTE: `attrs` should be in the form `{node: {key: value}}` where
+    - `node` is the node to insert the attribute into
+    - `key` is the name of the attribute
+    - `value` is the value of the attribute
     """
-    for node in graph.nodes():
-        attr_val = attrs.get(node, None)
-        nx.set_node_attributes(graph, {node: {attr_key: attr_val}})
+    nx.set_node_attributes(graph, attrs)
+
+
+def to_torch_data(graph: nx.Graph) -> Data:
+    """
+    Convert `graph` to an instance of `torch_geometric.data.Data`
+    NOTE: Edges must be normalized in order for `from_networkx` to play nice
+    """
+    normalize_edge_attributes(graph)
+    return convert.from_networkx(graph)
