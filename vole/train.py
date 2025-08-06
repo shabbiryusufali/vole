@@ -15,8 +15,7 @@ from utils.graph import (
     to_torch_data,
 )
 from utils.train import get_corpus_splits
-from utils.embeddings import EmbeddingWrapper
-from utils.process import StringUtils, process_extern_calls
+from utils.embeddings import EmbeddingsWrapper
 
 import utils.vexir2vec.model_OTA  # NOTE: MUST be imported this way
 from torch.utils.data import TensorDataset, DataLoader
@@ -32,13 +31,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+# TODO: Bad practice to define this at top level
 HERE = pathlib.Path(__file__).parent.resolve()
-VOCAB = pathlib.Path(
-    HERE / "./utils/vexir2vec/vocabulary.txt"
-)  # NOTE: Might be wrong path since the base class is in `vexir2vec`
+VOCAB = pathlib.Path(HERE / "./utils/vexir2vec/vocabulary.txt")
 MODEL = pathlib.Path(HERE / "./models/vexir2vec.model")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-STRUTILS = StringUtils()
+EMBEDDINGS = EmbeddingsWrapper(VOCAB)
 
 # Patch the resolution of the model's source at runtime
 sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
@@ -50,23 +48,21 @@ vexir2vec.eval()
 
 def prepare_data_for_split(split: list[pathlib.Path]) -> list:
     split_data = []
-    embeddings = EmbeddingWrapper(VOCAB)
 
     for path in split:
         proj, cfg = get_project_cfg(path)
         funcs = [func for func in cfg.functions.values()]
-        (
-            ext_lib_fn_names,
-            extern_edges,
-            edges,
-            called_set,
-        ) = process_extern_calls(funcs, proj)
+        extern_funcs = EMBEDDINGS.process_extern_calls(funcs, proj)
 
         for func, sub_cfg in get_sub_cfgs(cfg):
             source = get_digraph_source_nodes(sub_cfg)[0]
             name = sub_cfg.nodes[source].get("name")
-            str_refs = STRUTILS.process_string_refs(func, False)
-            block_str_vec = STRUTILS.get_str_emb(str_refs)
+            str_refs = EMBEDDINGS.process_string_refs(func, False)
+            block_str_vec = EMBEDDINGS.get_str_emb(str_refs)
+            block_lib_vec = EMBEDDINGS.get_ext_lib_emb(
+                extern_funcs.get(func.addr)
+            )
+            block_lib_vec = block_lib_vec.reshape(-1)
 
             # TODO: More granular labelling
             if not name:
@@ -80,28 +76,41 @@ def prepare_data_for_split(split: list[pathlib.Path]) -> list:
 
             for node, stmts_ir in lift_stmt_ir(sub_cfg):
                 # Preprocess data (into VexIR2Vec's expected format)
-                inst_list = embeddings.replace_instructions_with_keywords(
+                inst_list = EMBEDDINGS.replace_instructions_with_keywords(
                     stmts_ir
                 )
-                norm_list = embeddings.normalize_instructions(inst_list)
+                norm_list = EMBEDDINGS.normalize_instructions(inst_list)
                 (
                     block_opc_vec,
                     block_ty_vec,
                     block_arg_vec,
-                ) = embeddings.get_vector_triplets(norm_list)
+                ) = EMBEDDINGS.get_vector_triplets(norm_list)
 
-                # TODO: Compute this from ext_lib_fn_names, extern_edges, edges, and called_set somehow
-                block_lib_vec = []
+                block_opc_tens = torch.squeeze(
+                    torch.stack(list(torch.from_numpy(block_opc_vec)), dim=0)
+                )
+                block_ty_tens = torch.squeeze(
+                    torch.stack(list(torch.from_numpy(block_ty_vec)), dim=0)
+                )
+                block_arg_tens = torch.squeeze(
+                    torch.stack(list(torch.from_numpy(block_arg_vec)), dim=0)
+                )
+                block_str_tens = torch.squeeze(
+                    torch.stack(list(torch.from_numpy(block_str_vec)), dim=0)
+                )
+                block_lib_tens = torch.squeeze(
+                    torch.stack(list(torch.from_numpy(block_lib_vec)), dim=0)
+                )
 
                 dataset = TensorDataset(
-                    block_opc_vec,
-                    block_ty_vec,
-                    block_arg_vec,
-                    block_str_vec,
-                    block_lib_vec,
+                    block_opc_tens,
+                    block_ty_tens,
+                    block_arg_tens,
+                    block_str_tens,
+                    block_lib_tens,
                 )
                 dataloader = DataLoader(
-                    dataset, batch_size=1, shuffle=False, num_workers=20
+                    dataset, batch_size=1, shuffle=False, num_workers=12
                 )
 
                 ir_vec = []
