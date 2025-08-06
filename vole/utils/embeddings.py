@@ -1,13 +1,22 @@
+import re
+import string
 import pathlib
+import fasttext
 import numpy as np
 
 from .vexir2vec.embeddings import SymbolicEmbeddings
 from .vexir2vec.normalize import Normalizer
 
 from pyvex.stmt import IRStmt
+from angr import Project
+from angr.knowledge_plugins.functions import Function
 
 
-class EmbeddingWrapper(SymbolicEmbeddings):
+HERE = pathlib.Path(__file__).parent.resolve()
+MODEL = pathlib.Path(HERE / "../models/cc.en.100.bin")
+
+
+class EmbeddingsWrapper(SymbolicEmbeddings):
     """
     Wraps `SymbolicEmbeddings` to provide additional functionality
     NOTE: The authors suggest normalization level 3 unless otherwise necessary
@@ -17,6 +26,7 @@ class EmbeddingWrapper(SymbolicEmbeddings):
     def __init__(self, vocab: pathlib.Path, normalize: int = 3):
         super().__init__(vocab)
         self.norm = Normalizer(normalize)
+        self.ft = fasttext.load_model(str(MODEL))
 
     def replace_instructions_with_keywords(
         self, stmts: list[IRStmt] | None
@@ -86,14 +96,14 @@ class EmbeddingWrapper(SymbolicEmbeddings):
         """
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
-        block_O_Vec = np.zeros(self.dim)
-        block_T_Vec = np.zeros(self.dim)
-        block_A_Vec = np.zeros(self.dim)
+        block_opc_vec = np.zeros(self.dim, dtype=np.float32)
+        block_ty_vec = np.zeros(self.dim, dtype=np.float32)
+        block_arg_vec = np.zeros(self.dim, dtype=np.float32)
 
         for norm_stmt in norm_list:
-            stmt_O_Vec = np.zeros(self.dim)
-            stmt_T_Vec = np.zeros(self.dim)
-            stmt_A_Vec = np.zeros(self.dim)
+            stmt_opc_vec = np.zeros(self.dim, dtype=np.float32)
+            stmt_ty_vec = np.zeros(self.dim, dtype=np.float32)
+            stmt_arg_vec = np.zeros(self.dim, dtype=np.float32)
             if norm_stmt is None or norm_stmt == "":
                 continue
 
@@ -101,9 +111,9 @@ class EmbeddingWrapper(SymbolicEmbeddings):
             tokens = self.canonicalizeTokens(tokens)
 
             for token in tokens:
-                val_O = np.zeros(self.dim)
-                val_T = np.zeros(self.dim)
-                val_A = np.zeros(self.dim)
+                val_opc = np.zeros(self.dim, dtype=np.float32)
+                val_ty = np.zeros(self.dim, dtype=np.float32)
+                val_arg = np.zeros(self.dim, dtype=np.float32)
                 if token in [
                     "register",
                     "integer",
@@ -111,7 +121,7 @@ class EmbeddingWrapper(SymbolicEmbeddings):
                     "vector",
                     "decimal",
                 ] or token.startswith("ity_"):
-                    val_T = self._lookupVocab(token)
+                    val_ty = self._lookupVocab(token)
                 elif token in [
                     "variable",
                     "constant",
@@ -130,16 +140,124 @@ class EmbeddingWrapper(SymbolicEmbeddings):
                         "clz",
                     )
                 ):
-                    val_A = self._lookupVocab(token)
+                    val_arg = self._lookupVocab(token)
                 else:
-                    val_O = self._lookupVocab(token)
+                    val_opc = self._lookupVocab(token)
 
-                stmt_O_Vec += val_O
-                stmt_T_Vec += val_T
-                stmt_A_Vec += val_A
+                stmt_opc_vec += val_opc
+                stmt_ty_vec += val_ty
+                stmt_arg_vec += val_arg
 
-            block_O_Vec += stmt_O_Vec
-            block_T_Vec += stmt_T_Vec
-            block_A_Vec += stmt_A_Vec
+            block_opc_vec += stmt_opc_vec
+            block_ty_vec += stmt_ty_vec
+            block_arg_vec += stmt_arg_vec
 
-        return (block_O_Vec, block_T_Vec, block_A_Vec)
+        return (block_opc_vec, block_ty_vec, block_arg_vec)
+
+    def get_embedding(self, str_refs):
+        vectors = [
+            self.ft.get_word_vector(word).reshape((1, 100)) for word in str_refs
+        ]
+        return np.sum(np.concatenate(vectors, axis=0), axis=0, dtype=np.float32)
+
+    def get_ext_lib_emb(self, ext_libs: list):
+        libVec = (
+            self.get_embedding(ext_libs)
+            if ext_libs
+            else np.zeros(self.dim, dtype=np.float32)
+        )
+        return libVec.reshape((1, -1))
+
+    def get_str_emb(self, str_refs: list[str]):
+        return (
+            self.get_embedding(str_refs)
+            if str_refs
+            else np.zeros(self.dim, dtype=np.float32)
+        )
+
+    def remove_entity(self, text, entity_list):
+        for entity in entity_list:
+            if entity in text:
+                text = text.replace(entity, " ")
+        return text.strip()
+
+    def process_string_refs(self, func, isUnstripped) -> list[str]:
+        str_refs = []
+
+        for _, str_ref in func.string_references():
+            if isUnstripped:
+                break
+            """
+            preprocess stringrefs for cleaning
+            1. removing everything other than alphabets
+            2. removing strings containing paths
+            3. removing format specifiers
+            4. lowercasing everything
+            5. convert to separate tokens
+            """
+            # print("Debug str_ref: ",str_ref)
+            str_ref = str_ref.decode("latin-1")
+            if "http" in str_ref:
+                continue
+            format_specifiers = [
+                "%c",
+                "%s",
+                "%hi",
+                "%h",
+                "%Lf",
+                "%n",
+                "%d",
+                "%i",
+                "%o",
+                "%x",
+                "%p",
+                "%f",
+                "%u",
+                "%e",
+                "%E",
+                "%%",
+                "%#lx",
+                "%lu",
+                "%ld",
+                "__",
+                "_",
+            ]
+            punctuations = list(string.punctuation)
+            str_ref = self.remove_entity(str_ref, format_specifiers)
+            str_ref = self.remove_entity(str_ref, punctuations)
+            str_ref = re.sub("[^a-zA-Z]", " ", str_ref).lower().strip().split()
+            if str_ref:
+                str_refs.extend(str_ref)
+
+        return str_refs
+
+    def process_extern_calls(
+        self, funcs: list[Function], project: Project
+    ) -> dict[int, list]:
+        """
+        NOTE: Adapted from VexIR2Vex/vexNet/utils.py
+        """
+        ext_lib_funcs = [
+            s.name
+            for s in project.loader.symbols
+            if s.is_function and s.is_extern
+        ]
+        ext_lib_fn_names = {}
+
+        for func in funcs:
+            call_sites = func.get_call_sites()
+
+            for call_site in call_sites:
+                callee = project.kb.functions.function(
+                    func.get_call_target(call_site)
+                )
+
+                if callee is None:
+                    continue
+                if callee.name in ext_lib_funcs:
+                    if func.addr in ext_lib_fn_names:
+                        ext_lib_fn_names[func.addr].append(callee.name)
+                    else:
+                        ext_lib_fn_names[func.addr] = [callee.name]
+
+        return ext_lib_fn_names
