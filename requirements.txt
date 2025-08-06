@@ -72,6 +72,7 @@ pytz==2025.2
 pyvex==9.2.168
 requests==2.32.4
 rich==14.1.0
+ruff==0.12.7
 scipy==1.13.1
 setuptools==80.9.0
 six==1.17.0
