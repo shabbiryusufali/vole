@@ -1,12 +1,10 @@
 import pathlib
-import sys
 from collections.abc import Iterator
 
 import angr
 import networkx as nx
-import torch
-import utils.model_OTA  # NOTE: MUST be imported this way
 from angr.knowledge_plugins.cfg import CFGNode
+from angr.knowledge_plugins.functions import Function
 from angr.analyses.cfg import CFGFast
 from pyvex.stmt import AbiHint, IMark, IRStmt, NoOp
 
@@ -39,9 +37,9 @@ def lift_stmt_ir(
             yield (node, None)
 
 
-def get_program_cfg(file: pathlib.Path) -> CFGFast:
+def get_project_cfg(file: pathlib.Path) -> tuple[angr.Project, CFGFast]:
     """
-    Returns the CFG of `file`
+    Returns the angr project and CFG of `file`
     """
     project = angr.Project(file, auto_load_libs=False)
     cfg = project.analyses.CFGFast(
@@ -52,10 +50,10 @@ def get_program_cfg(file: pathlib.Path) -> CFGFast:
         normalize=True,
     )
 
-    return cfg
+    return project, cfg
 
 
-def get_sub_cfgs(cfg: CFGFast) -> Iterator[nx.DiGraph]:
+def get_sub_cfgs(cfg: CFGFast) -> Iterator[Function, nx.DiGraph]:
     """
     Iterator that yields a `nx.DiGraph` corresponding to a subgraph of `cfg`
     """
@@ -70,29 +68,4 @@ def get_sub_cfgs(cfg: CFGFast) -> Iterator[nx.DiGraph]:
                     subgraph, {node: {"block": cfgnode.block}}
                 )
 
-            yield subgraph
-
-
-def vectorize_stmt_ir(stmts: list[IRStmt] | None) -> list[list[int]]:
-    """
-    Converts the IR for each statement in `stmts` to a vector representation using VexIR2Vec
-    """
-    if not stmts:
-        return []
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    here = pathlib.Path(__file__).parent.resolve()
-    model_path = pathlib.Path(here / "../models/vexir2vec.model")
-
-    # Patch the resolution of the model's source at runtime
-    sys.modules["model_OTA"] = utils.model_OTA
-
-    # TODO: Figure out if it's possible to load the model with weights_only=True
-    vexir2vec = torch.load(model_path, map_location=device, weights_only=False)
-    vexir2vec.eval()
-
-    # TODO: Format each statement in `stmts` to be run in `vexir2vec`
-    # NOTE: For usage, see: https://github.com/IITH-Compilers/VexIR2Vec/blob/43538167644db81cbfda89716c113b483aa9fd06/experiments/diffing/v2v_diffing.py#L82-L344
-
-    # TODO: Return vector embeddings for each statement
-    return [1]
+            yield func, subgraph
