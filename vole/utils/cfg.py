@@ -12,7 +12,7 @@ from .graph import insert_node_attributes
 
 
 def lift_stmt_ir(
-    cfg: nx.DiGraph
+    cfg: nx.DiGraph,
 ) -> Iterator[tuple[CFGNode, list[IRStmt] | None]]:
     """
     Iterator that yields the IR of each `IRStmt` of each `CFGNode` in `cfg`

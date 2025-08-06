@@ -154,29 +154,29 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
 
         return (block_opc_vec, block_ty_vec, block_arg_vec)
 
-    def get_embedding(self, str_refs):
+    def get_embedding(self, str_refs: list) -> np.ndarray:
         vectors = [
             self.ft.get_word_vector(word).reshape((1, 100)) for word in str_refs
         ]
         return np.sum(np.concatenate(vectors, axis=0), axis=0, dtype=np.float32)
 
-    def get_ext_lib_emb(self, ext_libs: list):
-        libVec = (
+    def get_ext_lib_emb(self, ext_libs: list) -> np.ndarray:
+        lib_vec = (
             self.get_embedding(ext_libs)
             if ext_libs
             else np.zeros(self.dim, dtype=np.float32)
         )
-        return libVec.reshape((1, -1))
+        return lib_vec.reshape((1, -1))
 
-    def get_str_emb(self, str_refs: list[str]):
+    def get_str_emb(self, str_refs: list[str]) -> np.ndarray:
         return (
             self.get_embedding(str_refs)
             if str_refs
             else np.zeros(self.dim, dtype=np.float32)
         )
 
-    def remove_entity(self, text, entity_list):
-        for entity in entity_list:
+    def remove_entity(self, text, entities: list):
+        for entity in entities:
             if entity in text:
                 text = text.replace(entity, " ")
         return text.strip()
