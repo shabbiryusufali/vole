@@ -2,8 +2,17 @@ import logging
 import pathlib
 import argparse
 
-from utils.cfg import get_program_cfg, get_sub_cfgs, lift_stmt_ir, vectorize_stmt_ir
-from utils.graph import get_digraph_source_nodes, insert_node_attributes, to_torch_data
+from utils.cfg import (
+    get_program_cfg,
+    get_sub_cfgs,
+    lift_stmt_ir,
+    vectorize_stmt_ir,
+)
+from utils.graph import (
+    get_digraph_source_nodes,
+    insert_node_attributes,
+    to_torch_data,
+)
 from utils.train import get_corpus_splits
 
 # Silence angr

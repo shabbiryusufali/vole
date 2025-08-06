@@ -10,19 +10,12 @@ from angr.knowledge_plugins.cfg import CFGNode
 from angr.analyses.cfg import CFGFast
 from pyvex.stmt import AbiHint, IMark, IRStmt, NoOp
 
-from .graph import traverse_digraph, insert_node_attributes
+from .graph import insert_node_attributes
 
 
-def lift_block_ir(cfg: nx.DiGraph) -> tuple[CFGNode, str]:
-    """
-    Iterator that yields the IR of each `CFGNode` in `cfg`
-    """
-    for node in traverse_digraph(cfg):
-        if node.block:
-            yield (node, str(node.block.vex))
-
-
-def lift_stmt_ir(cfg: nx.DiGraph) -> tuple[CFGNode, list[IRStmt] | None]:
+def lift_stmt_ir(
+    cfg: nx.DiGraph
+) -> Iterator[tuple[CFGNode, list[IRStmt] | None]]:
     """
     Iterator that yields the IR of each `IRStmt` of each `CFGNode` in `cfg`
     """
@@ -73,7 +66,9 @@ def get_sub_cfgs(cfg: CFGFast) -> Iterator[nx.DiGraph]:
             for node in subgraph:
                 cfgnode = cfg.model.get_any_node(node.addr)
                 insert_node_attributes(subgraph, {node: {"name": cfgnode.name}})
-                insert_node_attributes(subgraph, {node: {"block": cfgnode.block}})
+                insert_node_attributes(
+                    subgraph, {node: {"block": cfgnode.block}}
+                )
 
             yield subgraph
 

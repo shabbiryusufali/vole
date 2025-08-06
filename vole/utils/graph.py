@@ -21,17 +21,10 @@ def get_digraph_source_nodes(graph: nx.DiGraph) -> any:
     Returns the sources of `graph` if any exist
     """
     return [
-        n for n in graph.nodes() if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
+        n
+        for n in graph.nodes()
+        if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
     ]
-
-
-def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
-    """
-    Iterator that yields nodes in `graph`
-    """
-    for node, neighbours in graph.adjacency():
-        for neighbour in neighbours.keys():
-            yield neighbour
 
 
 def normalize_edge_attributes(graph: nx.Graph) -> None:
@@ -53,7 +46,9 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         pass  # nosec B110
 
 
-def insert_node_attributes(graph: nx.Graph, attrs: dict[any, dict[str, any]]) -> None:
+def insert_node_attributes(
+    graph: nx.Graph, attrs: dict[any, dict[str, any]]
+) -> None:
     """
     Inserts `attrs` into `graph
     NOTE: `attrs` should be in the form `{node: {key: value}}` where

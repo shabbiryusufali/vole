@@ -19,7 +19,9 @@ torch.random.manual_seed(SEED)
 
 
 class FullyConnectedLayer(nn.Module):
-    def __init__(self, input_size, output_size, activation="relu", use_batchnorm=False):
+    def __init__(
+        self, input_size, output_size, activation="relu", use_batchnorm=False
+    ):
         super(FullyConnectedLayer, self).__init__()
 
         self.fc = nn.Linear(input_size, output_size)
@@ -120,7 +122,9 @@ class FCNNWithAttention(nn.Module):
             if i == concat_layer:
                 input_size += 200
             layers.append(
-                FullyConnectedLayer(input_size, output_size, activation, use_batchnorm)
+                FullyConnectedLayer(
+                    input_size, output_size, activation, use_batchnorm
+                )
             )
             input_size = output_size  # Update input size for next layer
         return nn.ModuleList(layers)
@@ -141,7 +145,12 @@ class FCNNWithAttention(nn.Module):
         # Compute attention-weighted representations
         attention_weights = F.softmax(
             torch.stack(
-                [attention_logits_opc, attention_logits_ty, attention_logits_arg], dim=0
+                [
+                    attention_logits_opc,
+                    attention_logits_ty,
+                    attention_logits_arg,
+                ],
+                dim=0,
             ),
             dim=0,
         )
@@ -160,7 +169,9 @@ class FCNNWithAttention(nn.Module):
             if i == self.concat_layer:
                 output = torch.cat((output, strEmbed, libEmbed), dim=1)
             output = layer(output)
-            output = F.dropout(output, p=self.drop_units[i], training=self.training)
+            output = F.dropout(
+                output, p=self.drop_units[i], training=self.training
+            )
 
         output = self.output_layer(output)
         return output, attention_weights

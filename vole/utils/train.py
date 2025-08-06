@@ -4,7 +4,9 @@ import numpy as np
 from utils.io import crawl
 
 
-def get_corpus_splits(cwe_id: str, path: pathlib.Path) -> tuple[list, list, list]:
+def get_corpus_splits(
+    cwe_id: str, path: pathlib.Path
+) -> tuple[list, list, list]:
     """
     Reads in paths of test files from `path` corresponding to `cwe_id`,
     shuffles them, and returns a 45-45-10 train-test-eval split
