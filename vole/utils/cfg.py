@@ -53,7 +53,7 @@ def get_project_cfg(file: pathlib.Path) -> tuple[angr.Project, CFGFast]:
     return project, cfg
 
 
-def get_sub_cfgs(cfg: CFGFast) -> Iterator[Function, nx.DiGraph]:
+def get_sub_cfgs(cfg: CFGFast) -> Iterator[tuple[Function, nx.DiGraph]]:
     """
     Iterator that yields a `nx.DiGraph` corresponding to a subgraph of `cfg`
     """

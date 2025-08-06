@@ -1,5 +1,4 @@
 import pathlib
-from collections.abc import Iterator
 
 import matplotlib
 import networkx as nx
@@ -16,7 +15,7 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_nodes(graph: nx.DiGraph) -> any:
+def get_digraph_source_nodes(graph: nx.DiGraph):
     """
     Returns the sources of `graph` if any exist
     """
@@ -46,9 +45,7 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
         pass  # nosec B110
 
 
-def insert_node_attributes(
-    graph: nx.Graph, attrs: dict[any, dict[str, any]]
-) -> None:
+def insert_node_attributes(graph: nx.Graph, attrs: dict) -> None:
     """
     Inserts `attrs` into `graph
     NOTE: `attrs` should be in the form `{node: {key: value}}` where
