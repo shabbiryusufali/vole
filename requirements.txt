@@ -17,6 +17,7 @@ cle==9.2.168
 contourpy==1.3.3
 cxxheaderparser==1.5.4
 cycler==0.12.1
+fasttext==0.9.3
 filelock==3.18.0
 fonttools==4.59.0
 frozenlist==1.7.0
@@ -56,6 +57,7 @@ pillow==11.3.0
 propcache==0.3.2
 protobuf==6.31.1
 psutil==7.0.0
+pybind11==3.0.0
 pycparser==2.22
 pycryptodome==3.23.0
 pydemumble==0.0.1
