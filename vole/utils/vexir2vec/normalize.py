@@ -17,61 +17,61 @@ class Normalizer:
 
     def initRegex(self):
         self.regex = {
-            "hex_match": "(0x[0-9a-f]+)",
-            "negative_hex": "0x[89a-f][0-9a-f]*",
-            "offset": "offset=",
-            "r": "r",
-            "var": "(t\d+)",
-            "var_r": "(t\d+)",
-            "def_var": "(t\d+) = .*",
-            "def_var_r": "(t\d+) = .*",
-            "nan": "(?<!\w)nan(?!\w)",  #  with lookarounds
+            "hex_match": r"(0x[0-9a-f]+)",
+            "negative_hex": r"0x[89a-f][0-9a-f]*",
+            "offset": r"offset=",
+            "r": r"r",
+            "var": r"(t\d+)",
+            "var_r": r"(t\d+)",
+            "def_var": r"(t\d+) = .*",
+            "def_var_r": r"(t\d+) = .*",
+            "nan": r"(?<!\w)nan(?!\w)",  #  with lookarounds
             # 1
-            "add_sub_match": "(add|sub)\((.*),(.*)\)",
-            "add_detect": "add",  # for detecting in line
-            "add_instr": "add",  # for replacing in regex
-            "sub_detect": "sub",
-            "sub_instr": "sub",
+            "add_sub_match": r"(add|sub)\((.*),(.*)\)",
+            "add_detect": r"add",  # for detecting in line
+            "add_instr": r"add",  # for replacing in regex
+            "sub_detect": r"sub",
+            "sub_instr": r"sub",
             # 2
-            "conversion_match": "= .*(trunc|ext).*\((.+)\)",
-            "conversion_sub": "\w*(trunc|ext).*\((.+)\)",
+            "conversion_match": r"= .*(trunc|ext).*\((.+)\)",
+            "conversion_sub": r"\w*(trunc|ext).*\((.+)\)",
             # 3, 7
-            "load_detect": "load",
-            "load_sub": "load.*\(.*\)",
-            "load_match": "= load.*\((.*)\)",
-            "store_detect": "store",
-            "store_sub": "store\(.*\)",
-            "store_match": "store\((.*)\) =",
-            "get_detect": "get",
-            "get_sub": "get.*\(.*\)",
-            "get_match": "= get.*\((.*)\)",
-            "put_detect": "put(",
-            "put_sub": "put\(.*\)",
-            "put_match": "put\((.*)\) =",
+            "load_detect": r"load",
+            "load_sub": r"load.*\(.*\)",
+            "load_match": r"= load.*\((.*)\)",
+            "store_detect": r"store",
+            "store_sub": r"store\(.*\)",
+            "store_match": r"store\((.*)\) =",
+            "get_detect": r"get",
+            "get_sub": r"get.*\(.*\)",
+            "get_match": r"= get.*\((.*)\)",
+            "put_detect": r"put(",
+            "put_sub": r"put\(.*\)",
+            "put_match": r"put\((.*)\) =",
             # 4
-            "copy_match_r": "(t\d+) = (t\d+)",
-            "no_digit_ahead": "(?!\d)",
-            "sub_left_positive": "sub.*\(t\d+,",
+            "copy_match_r": r"(t\d+) = (t\d+)",
+            "no_digit_ahead": r"(?!\d)",
+            "sub_left_positive": r"sub.*\(t\d+,",
             # 5.
-            "mul_detect": "mul",
-            "div_detect": "div",
+            "mul_detect": r"mul",
+            "div_detect": r"div",
             # 6
-            "assign_const": "= 0x[0-9a-f]+",
-            "assign_var": "= t\d+",
-            "expression_match": "t\d+ = (.*)",
-            "LHS_expr_match": "(t\d+) = (.*)",
+            "assign_const": r"= 0x[0-9a-f]+",
+            "assign_var": r"= t\d+",
+            "expression_match": r"t\d+ = (.*)",
+            "LHS_expr_match": r"(t\d+) = (.*)",
             # 7
-            "RHS_match": "= (.*)",
-            "LHS_match_r": "(t\d+) =",
+            "RHS_match": r"= (.*)",
+            "LHS_match_r": r"(t\d+) =",
         }
 
         # considering registers in higher levels
         if self.level >= 3:
             optional = {
-                "var_r": "([rt]\d+)",
-                "def_var_r": "([rt]\d+) = .*",
-                "LHS_match_r": "([rt]\d+) =",
-                "copy_match_r": "([rt]\d+) = ([rt]\d+)",
+                "var_r": r"([rt]\d+)",
+                "def_var_r": r"([rt]\d+) = .*",
+                "LHS_match_r": r"([rt]\d+) =",
+                "copy_match_r": r"([rt]\d+) = ([rt]\d+)",
             }
             self.regex.update(optional)
 
