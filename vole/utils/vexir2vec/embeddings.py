@@ -23,7 +23,7 @@ class SymbolicEmbeddings:
         self.vfile = open(vocab, "r")
         self.__sev, self.dim = self.parseSEV()
         self.keywords = Keywords()
-        self.delimiters = "=|,|\(|\)|,|\{|\}|::|->| |:|\[|\]"
+        self.delimiters = r"=|,|\(|\)|,|\{|\}|::|->| |:|\[|\]"
         self.block_weights = {}
         self.seed_value = seed_value
         random.seed(self.seed_value)
