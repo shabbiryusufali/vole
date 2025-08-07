@@ -2,7 +2,6 @@ import argparse
 import logging
 import pathlib
 
-
 log_levels = {
     "debug": logging.DEBUG,
     "info": logging.INFO,

@@ -1,10 +1,8 @@
 import logging
 
 from angr import Project
-
-from cli import parse, log_levels
+from cli import log_levels, parse
 from modules import modules
-
 
 logger = logging.getLogger(__name__)
 
