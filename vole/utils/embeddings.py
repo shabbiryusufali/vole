@@ -166,14 +166,16 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
         stmt_str = str(stmt).lower()
-        tokens = self.tokenize(stmt_str)
 
         if stmt.tag == "Ist_Dirty":
             return
 
+        tokens = self.tokenize(stmt_str)
+
         func_flag = False
         puti_flag = False
         geti_flag = False
+
         if stmt.tag == "Ist_WrTmp":
             if stmt.data.tag == "Iex_CCall":
                 func_flag = True
@@ -225,11 +227,12 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
         block_arg_vec = np.zeros(self.dim, dtype=np.float32)
 
         for norm_stmt in norm_list:
+            if norm_stmt is None or norm_stmt == "":
+                continue
+
             stmt_opc_vec = np.zeros(self.dim, dtype=np.float32)
             stmt_ty_vec = np.zeros(self.dim, dtype=np.float32)
             stmt_arg_vec = np.zeros(self.dim, dtype=np.float32)
-            if norm_stmt is None or norm_stmt == "":
-                continue
 
             tokens = self.tokenize(norm_stmt)
             tokens = self.canonicalizeTokens(tokens)
@@ -238,6 +241,7 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
                 val_opc = np.zeros(self.dim, dtype=np.float32)
                 val_ty = np.zeros(self.dim, dtype=np.float32)
                 val_arg = np.zeros(self.dim, dtype=np.float32)
+
                 if token in [
                     "register",
                     "integer",
@@ -301,8 +305,7 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
 
     def remove_entity(self, text, entities: list):
         for entity in entities:
-            if entity in text:
-                text = text.replace(entity, " ")
+            text = text.replace(entity, " ")
         return text.strip()
 
     def process_string_refs(self, func, isUnstripped) -> list[str]:
