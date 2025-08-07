@@ -15,17 +15,6 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_nodes(graph: nx.DiGraph):
-    """
-    Returns the sources of `graph` if any exist
-    """
-    return [
-        n
-        for n in graph.nodes()
-        if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
-    ]
-
-
 def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes

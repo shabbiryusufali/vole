@@ -28,64 +28,56 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
         self.norm = Normalizer(normalize)
         self.ft = fasttext.load_model(str(MODEL))
 
-    def replace_instructions_with_keywords(
-        self, stmts: list[IRStmt] | None
-    ) -> list[str]:
+    def replace_instructions_with_keywords(self, stmt: IRStmt) -> list[str]:
         """
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
-        if stmts is None:
-            return []
+        stmt_str = str(stmt).lower()
+        tokens = self.tokenize(stmt_str)
 
-        inst_list = []
-        for stmt in stmts:
-            stmt_str = str(stmt).lower()
-            tokens = self.tokenize(stmt_str)
+        if stmt.tag == "Ist_Dirty":
+            # TODO: HMMM
+            pass
 
-            if stmt.tag == "Ist_Dirty":
-                continue
+        func_flag = False
+        puti_flag = False
+        geti_flag = False
+        if stmt.tag == "Ist_WrTmp":
+            if stmt.data.tag == "Iex_CCall":
+                func_flag = True
+            elif stmt.data.tag == "Iex_GetI":
+                geti_flag = True
 
-            func_flag = False
-            puti_flag = False
-            geti_flag = False
-            if stmt.tag == "Ist_WrTmp":
-                if stmt.data.tag == "Iex_CCall":
-                    func_flag = True
-                elif stmt.data.tag == "Iex_GetI":
-                    geti_flag = True
+        if stmt.tag == "Ist_PutI":
+            puti_flag = True
 
-            if stmt.tag == "Ist_PutI":
-                puti_flag = True
+        new_stmt = stmt_str
 
-            new_stmt = stmt_str
-
-            for i, token in enumerate(tokens):
-                replace_token = token
-                try:
-                    if i == 1:
-                        if func_flag is True:
-                            replace_token = "function"
-                        elif puti_flag is True:
-                            replace_token = "r1234"
-                    elif i == 2:
-                        if geti_flag is True:
-                            replace_token = "r1234"
-                        elif puti_flag is True:
-                            replace_token = "remove"
-                    elif i == 3 and geti_flag is True:
+        for i, token in enumerate(tokens):
+            replace_token = token
+            try:
+                if i == 1:
+                    if func_flag is True:
+                        replace_token = "function"
+                    elif puti_flag is True:
+                        replace_token = "r1234"
+                elif i == 2:
+                    if geti_flag is True:
+                        replace_token = "r1234"
+                    elif puti_flag is True:
                         replace_token = "remove"
+                elif i == 3 and geti_flag is True:
+                    replace_token = "remove"
 
-                    new_stmt = new_stmt.replace(
-                        token, self.keywords.getKeyword(replace_token), 1
-                    )
+                new_stmt = new_stmt.replace(
+                    token, self.keywords.getKeyword(replace_token), 1
+                )
 
-                except KeyError:
-                    # VARIABLE, CONSTANT, REGISTER, INTEGER, FLOAT, VECTOR, DECIMAL are not in keywords dict; so allow them
-                    pass
+            except KeyError:
+                # VARIABLE, CONSTANT, REGISTER, INTEGER, FLOAT, VECTOR, DECIMAL are not in keywords dict; so allow them
+                pass
 
-            inst_list.append(new_stmt)
-
-        return inst_list
+        return new_stmt
 
     def normalize_instructions(self, inst_list: list[str]) -> list[str]:
         return self.norm.transformWindow(inst_list)
