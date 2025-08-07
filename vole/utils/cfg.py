@@ -3,12 +3,8 @@ from collections.abc import Iterator
 
 import angr
 import networkx as nx
-from angr.knowledge_plugins.cfg import CFGNode
 from angr.knowledge_plugins.functions import Function
 from angr.analyses.cfg import CFGFast
-from pyvex.stmt import AbiHint, IMark, IRStmt, NoOp
-
-from .graph import insert_node_attributes
 
 
 def get_project_cfg(file: pathlib.Path) -> tuple[angr.Project, CFGFast]:
