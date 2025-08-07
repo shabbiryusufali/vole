@@ -130,16 +130,16 @@ class IREmbeddings:
                     str_emb = data[3].to(DEVICE)
                     lib_emb = data[4].to(DEVICE)
 
-                    res = self.vexir2vec(
+                    res, _ = self.vexir2vec(
                         opc_emb, ty_emb, arg_emb, str_emb, lib_emb
                     )
-                    ir_vec.extend(res)
+                    ir_vec.extend(res.squeeze(0))
 
             for node in sub_cfg.nodes():
                 # Insert features as node attributes
                 # This ensures the values are preserved by torch later
-                insert_node_attributes(sub_cfg, {node: {"label": label}})
-                insert_node_attributes(sub_cfg, {node: {"ir_vec": ir_vec}})
+                insert_node_attributes(sub_cfg, {node: {"y": label}})
+                insert_node_attributes(sub_cfg, {node: {"x": ir_vec}})
 
             embeddings.append(to_torch_data(sub_cfg))
 
