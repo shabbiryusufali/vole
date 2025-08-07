@@ -49,8 +49,8 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     # TODO: Train GCN on `training_data`
     # possible model training code (i can't test it rn | model assuming graph level labelling)
-    training_data = prepare_data_for_split(train)
-    test_data = prepare_data_for_split(test)
+    training_data = prepare_data_for_split(train, ir_embed)
+    test_data = prepare_data_for_split(test, ir_embed)
 
     train_loader = DataLoader(training_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
