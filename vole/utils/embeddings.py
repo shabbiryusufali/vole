@@ -1,19 +1,155 @@
 import re
+import sys
 import string
+import torch
 import pathlib
 import fasttext
 import numpy as np
 
+from .cfg import get_sub_cfgs
+from .graph import to_torch_data, insert_node_attributes
 from .vexir2vec.embeddings import SymbolicEmbeddings
 from .vexir2vec.normalize import Normalizer
 
-from pyvex.stmt import IRStmt
+import utils.vexir2vec.model_OTA  # NOTE: MUST be imported this way
+
 from angr import Project
+from angr.analyses.cfg import CFGFast
 from angr.knowledge_plugins.functions import Function
+from pyvex.stmt import IRStmt, AbiHint, IMark, NoOp
+from torch.utils.data import TensorDataset, DataLoader
+from torch_geometric.data import Data
 
 
-HERE = pathlib.Path(__file__).parent.resolve()
-MODEL = pathlib.Path(HERE / "../models/cc.en.100.bin")
+PARENT = pathlib.Path(__file__).parent.resolve()
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class IREmbeddings:
+    def __init__(self):
+        self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
+        self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
+        self.embeddings = EmbeddingsWrapper(self.vocab)
+
+        # Patch the resolution of the model's source at runtime
+        sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
+
+        # TODO: Figure out if it's possible to load the model with weights_only=True
+        self.vexir2vec = torch.load(
+            self.model, map_location=DEVICE, weights_only=False
+        )
+        self.vexir2vec.eval()
+
+    def get_function_embeddings(
+        self, proj: Project, cfg: CFGFast
+    ) -> list[Data]:
+        """
+        NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
+        """
+        funcs = [func for func in cfg.functions.values()]
+        extern_funcs = self.embeddings.process_extern_calls(funcs, proj)
+
+        embeddings = []
+
+        for func, sub_cfg in get_sub_cfgs(cfg):
+            str_refs = self.embeddings.process_string_refs(func, False)
+
+            blocks = {block.addr: block for block in func.blocks}
+            block_walks = self.embeddings.randomWalk(func, blocks.keys())
+
+            # TODO: More granular labelling
+            if not func.name:
+                label = -1  # Invalid
+            elif "bad" in func.name:
+                label = 0  # Bad (i.e. vulnerable)
+            elif "good" in func.name:
+                label = 1  # Good
+            else:
+                label = -1
+
+            func_opc_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
+            func_ty_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
+            func_arg_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
+            func_str_vec = self.embeddings.get_str_emb(str_refs)
+            func_lib_vec = self.embeddings.get_ext_lib_emb(
+                extern_funcs.get(func.addr)
+            ).reshape(-1)
+
+            for block_walk in block_walks:
+                for blocknode in block_walk:
+                    block = blocks.get(blocknode.addr)
+
+                    block_opc_vec = np.zeros(
+                        self.embeddings.dim, dtype=np.float32
+                    )
+                    block_ty_vec = np.zeros(
+                        self.embeddings.dim, dtype=np.float32
+                    )
+                    block_arg_vec = np.zeros(
+                        self.embeddings.dim, dtype=np.float32
+                    )
+
+                    if not block:
+                        continue
+
+                    if not block.vex:
+                        continue
+
+                    if not block.vex.has_statements:
+                        continue
+
+                    inst_list = [
+                        self.embeddings.replace_instructions_with_keywords(stmt)
+                        for stmt in block.vex.statements
+                        if stmt and not isinstance(stmt, (AbiHint, IMark, NoOp))
+                    ]
+                    norm_list = self.embeddings.normalize_instructions(
+                        inst_list
+                    )
+                    block_opc_vec, block_ty_vec, block_arg_vec = (
+                        self.embeddings.get_vector_triplets(norm_list)
+                    )
+
+                    func_opc_vec += block_opc_vec
+                    func_ty_vec += block_ty_vec
+                    func_arg_vec += block_arg_vec
+
+            dataloader = DataLoader(
+                TensorDataset(
+                    torch.from_numpy(func_opc_vec).unsqueeze(0),
+                    torch.from_numpy(func_ty_vec).unsqueeze(0),
+                    torch.from_numpy(func_arg_vec).unsqueeze(0),
+                    torch.from_numpy(func_str_vec).unsqueeze(0),
+                    torch.from_numpy(func_lib_vec).unsqueeze(0),
+                ),
+                batch_size=1,
+                shuffle=False,
+                num_workers=12,
+            )
+
+            ir_vec = []
+            for data in dataloader:
+                with torch.no_grad():
+                    opc_emb = data[0].to(DEVICE)
+                    ty_emb = data[1].to(DEVICE)
+                    arg_emb = data[2].to(DEVICE)
+                    str_emb = data[3].to(DEVICE)
+                    lib_emb = data[4].to(DEVICE)
+
+                    res = self.vexir2vec(
+                        opc_emb, ty_emb, arg_emb, str_emb, lib_emb
+                    )
+                    ir_vec.extend(res)
+
+            for node in sub_cfg.nodes():
+                # Insert features as node attributes
+                # This ensures the values are preserved by torch later
+                insert_node_attributes(sub_cfg, {node: {"label": label}})
+                insert_node_attributes(sub_cfg, {node: {"ir_vec": ir_vec}})
+
+            embeddings.append(to_torch_data(sub_cfg))
+
+        return embeddings
 
 
 class EmbeddingsWrapper(SymbolicEmbeddings):
@@ -26,9 +162,12 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
     def __init__(self, vocab: pathlib.Path, normalize: int = 3):
         super().__init__(vocab)
         self.norm = Normalizer(normalize)
-        self.ft = fasttext.load_model(str(MODEL))
+        self.model = pathlib.Path(PARENT / "../models/cc.en.100.bin")
+        self.ft = fasttext.load_model(str(self.model))
 
-    def replace_instructions_with_keywords(self, stmt: IRStmt) -> list[str]:
+    def replace_instructions_with_keywords(
+        self, stmt: IRStmt
+    ) -> list[str] | None:
         """
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
@@ -36,8 +175,7 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
         tokens = self.tokenize(stmt_str)
 
         if stmt.tag == "Ist_Dirty":
-            # TODO: HMMM
-            pass
+            return
 
         func_flag = False
         puti_flag = False
