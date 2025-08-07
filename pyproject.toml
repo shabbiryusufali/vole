@@ -1,6 +1,10 @@
 [tool.ruff]
 line-length = 80
 indent-width = 4
+exclude = [
+    "data/SARD",
+    "vexir2vec"
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -8,4 +12,4 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.bandit]
-exclude_dirs = ["**/tests/*", "__pycache__", ".git", "venv", ".venv"]
+exclude_dirs = ["**/tests/*", "__pycache__", ".git", "venv", ".venv", "data/SARD", "vexir2vec"]

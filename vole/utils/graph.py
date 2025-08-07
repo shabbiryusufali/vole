@@ -1,5 +1,4 @@
 import pathlib
-from collections.abc import Iterator
 
 import matplotlib
 import networkx as nx
@@ -16,44 +15,20 @@ def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     matplotlib.pyplot.clf()
 
 
-def get_digraph_source_nodes(graph: nx.DiGraph) -> any:
-    """
-    Returns the sources of `graph` if any exist
-    """
-    return [
-        n for n in graph.nodes() if graph.in_degree(n) == 0 and graph.out_degree(n) > 0
-    ]
-
-
-def traverse_digraph(graph: nx.DiGraph) -> Iterator[any]:
-    """
-    Iterator that yields nodes in `graph`
-    """
-    for node, neighbours in graph.adjacency():
-        for neighbour in neighbours.keys():
-            yield neighbour
-
-
 def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes
     """
-    try:
-        # The keys against which attributes of all other edges will be compared
-        edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
+    # The keys against which attributes of all other edges will be compared
+    edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
 
-        for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
-            new_attrs = {key: attrs.get(key) for key in edge_attrs}
-            attrs.clear()
-            nx.set_edge_attributes(graph, {(u, v): new_attrs})
-
-    except StopIteration:
-        # NOTE: CWE-703!
-        # TODO: Handle this in a less hacky fashion
-        pass  # nosec B110
+    for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
+        new_attrs = {key: attrs.get(key) for key in edge_attrs}
+        attrs.clear()
+        nx.set_edge_attributes(graph, {(u, v): new_attrs})
 
 
-def insert_node_attributes(graph: nx.Graph, attrs: dict[any, dict[str, any]]) -> None:
+def insert_node_attributes(graph: nx.Graph, attrs: dict) -> None:
     """
     Inserts `attrs` into `graph
     NOTE: `attrs` should be in the form `{node: {key: value}}` where

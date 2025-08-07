@@ -18,18 +18,13 @@ def make(cwe_id: str, path: str) -> None:
 def clean(cwe_id: str, path: str) -> None:
     """
     Invokes `make clean` in the subdirectory of `path` corresponding to `cwe_id`
-    Also cleans up `.txt` files created by `rip.py`
     """
     cwe_id = cwe_id.upper()
     path = pathlib.Path(path)
     makefile_pattern = f"{cwe_id}*/**/Makefile"
-    txt_pattern = f"{cwe_id}*/**/*.txt"
 
     for makefile in path.rglob(makefile_pattern):
         subprocess.run(["make", "clean", "-C", makefile.parent])
-
-    for txt in path.rglob(txt_pattern):
-        txt.unlink(missing_ok=True)
 
 
 def parse() -> dict:
@@ -46,7 +41,7 @@ def parse() -> dict:
         "-c",
         "--clean",
         action="store_true",
-        help="Whether or not to clean the compiled test cases and IR produced by `rip.py`",
+        help="Whether or not to clean the compiled test cases",
     )
 
     return vars(parser.parse_args())

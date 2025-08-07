@@ -1,12 +1,9 @@
 import logging
 import pathlib
 import argparse
-import torch
-from torch_geometric.nn import GCN
-from torch_geometric.loader import DataLoader
 
-from utils.cfg import get_program_cfg, get_sub_cfgs, lift_stmt_ir, vectorize_stmt_ir
-from utils.graph import get_digraph_source_nodes, insert_node_attributes, to_torch_data
+from utils.cfg import get_project_cfg
+from utils.embeddings import IREmbeddings
 from utils.train import get_corpus_splits
 
 # Silence angr
@@ -20,35 +17,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def prepare_data_for_split(split: list[pathlib.Path]) -> list:
+def prepare_data_for_split(
+    split: list[pathlib.Path], ir_embed: IREmbeddings
+) -> list:
     split_data = []
 
-    for idx, path in enumerate(split):
-        cfg = get_program_cfg(path)
-
-        for sub_cfg in get_sub_cfgs(cfg):
-            source = get_digraph_source_nodes(sub_cfg)[0]
-            name = sub_cfg.nodes[source].get("name")
-
-            # TODO: More granular labelling
-            if not name:
-                label = -1  # Invalid
-            elif "bad" in name:
-                label = 1  # Bad (i.e. vulnerable)
-            elif "good" in name:
-                label = 0  # Good
-
-            if label == -1:
-                continue
-
-            for node, stmts_ir in lift_stmt_ir(sub_cfg):
-                # Insert features as node attributes
-                # This ensures the values are preserved by torch later
-                stmts_vec = vectorize_stmt_ir(stmts_ir)
-                insert_node_attributes(sub_cfg, {node: {"label": label}})
-                insert_node_attributes(sub_cfg, {node: {"ir_vec": stmts_vec}})
-
-            split_data.append(to_torch_data(sub_cfg))
+    for path in split:
+        proj, cfg = get_project_cfg(path)
+        embeddings = ir_embed.get_function_embeddings(proj, cfg)
+        split_data.extend(embeddings)
 
     return split_data
 
@@ -58,15 +35,17 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     Trains a `torch_geometric.nn.models.GCN` from SARD test case binaries
     matching `cwe_id` in `path`
     """
-    train, test, evaluation = get_corpus_splits(cwe_id, path)
+    train, test = get_corpus_splits(cwe_id, path)
 
-    if not all((train, test, evaluation)):
+    if not all((train, test)):
         logger.info(
             f"""
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
             Check that `path` contains the compiled test cases.
             """
         )
+
+    ir_embed = IREmbeddings()
 
     # TODO: Train GCN on `training_data`
     # possible model training code (i can't test it rn | model assuming graph level labelling)
@@ -84,6 +63,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     criterion = torch.nn.CrossEntropyLoss()
 
     model.train()
+    
     for epoch in range(100):
         total_loss = 0
         for batch in train_loader:
@@ -99,17 +79,21 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     model.eval()
     correct = 0
     total = 0
+    
     with torch.no_grad():
         for batch in test_loader:
             out = model(batch.x, batch.edge_index, batch.batch)
             pred = out.argmax(dim=1)
             correct += (pred == batch.y.view(-1)).sum().item()
             total += batch.y.size(0)
+    
     print(f"Test Accuracy: {correct / total:.4f}")
+
 
 def save_model(model):
     # TODO: save model one we have one for good accuracy to use in the actual tool
     pass
+
 
 def parse() -> dict:
     parser = argparse.ArgumentParser(
