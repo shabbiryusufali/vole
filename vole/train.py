@@ -35,9 +35,9 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     Trains a `torch_geometric.nn.models.GCN` from SARD test case binaries
     matching `cwe_id` in `path`
     """
-    train, test, evaluation = get_corpus_splits(cwe_id, path)
+    train, test = get_corpus_splits(cwe_id, path)
 
-    if not all((train, test, evaluation)):
+    if not all((train, test)):
         logger.info(
             f"""
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
