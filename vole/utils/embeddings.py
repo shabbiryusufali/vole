@@ -57,15 +57,15 @@ class IREmbeddings:
             blocks = {block.addr: block for block in func.blocks}
             block_walks = self.embeddings.randomWalk(func, blocks.keys())
 
-            # TODO: More granular labelling
-            if not func.name:
-                label = -1  # Invalid
-            elif "bad" in func.name:
-                label = 0  # Bad (i.e. vulnerable)
-            elif "good" in func.name:
-                label = 1  # Good
-            else:
-                label = -1
+            label = (
+                -1
+                if not func.name
+                else 1
+                if "bad" in func.name
+                else 0
+                if "good" in func.name
+                else -1
+            )
 
             func_opc_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
             func_ty_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
