@@ -89,13 +89,7 @@ class IREmbeddings:
                         self.embeddings.dim, dtype=np.float32
                     )
 
-                    if not block:
-                        continue
-
-                    if not block.vex:
-                        continue
-
-                    if not block.vex.has_statements:
+                    if not all((block, block.vex, block.vex.has_statements)):
                         continue
 
                     inst_list = [
