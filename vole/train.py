@@ -1,3 +1,4 @@
+import torch
 import logging
 import pathlib
 import argparse
@@ -5,6 +6,9 @@ import argparse
 from utils.cfg import get_project_cfg
 from utils.embeddings import IREmbeddings
 from utils.train import get_corpus_splits
+
+from torch.utils.data import DataLoader
+from torch_geometric.nn.models import GCN
 
 # Silence angr
 logger = logging.getLogger("cle.backends.externs")
@@ -47,7 +51,6 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     ir_embed = IREmbeddings()
 
-    # TODO: Train GCN on `training_data`
     # possible model training code (i can't test it rn | model assuming graph level labelling)
     training_data = prepare_data_for_split(train, ir_embed)
     test_data = prepare_data_for_split(test, ir_embed)
