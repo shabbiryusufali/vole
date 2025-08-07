@@ -19,19 +19,13 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes
     """
-    try:
-        # The keys against which attributes of all other edges will be compared
-        edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
+    # The keys against which attributes of all other edges will be compared
+    edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
 
-        for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
-            new_attrs = {key: attrs.get(key) for key in edge_attrs}
-            attrs.clear()
-            nx.set_edge_attributes(graph, {(u, v): new_attrs})
-
-    except StopIteration:
-        # NOTE: CWE-703!
-        # TODO: Handle this in a less hacky fashion
-        pass  # nosec B110
+    for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
+        new_attrs = {key: attrs.get(key) for key in edge_attrs}
+        attrs.clear()
+        nx.set_edge_attributes(graph, {(u, v): new_attrs})
 
 
 def insert_node_attributes(graph: nx.Graph, attrs: dict) -> None:
