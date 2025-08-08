@@ -25,7 +25,7 @@ def prepare_data_for_split(
     for path in split:
         proj, cfg = get_project_cfg(path)
         embeddings = ir_embed.get_function_embeddings(proj, cfg)
-        split_data.extend(embeddings)
+        split_data.extend(embeddings.values())
 
     return split_data
 

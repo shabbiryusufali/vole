@@ -6,6 +6,9 @@ from torch_geometric.data import Data
 from torch_geometric.utils import convert
 
 
+EDGE_TYPES = {"transition": 0, "call": 1, "fake_return": 2}
+
+
 def save_graph(graph: nx.Graph, path: pathlib.Path) -> None:
     """
     Saves `graph` as a figure to `path`
@@ -19,11 +22,13 @@ def normalize_edge_attributes(graph: nx.Graph) -> None:
     """
     Ensures that all edges have consistent attributes
     """
-    # The keys against which attributes of all other edges will be compared
-    edge_attrs = set(list(next(iter(graph.edges(data=True)))[-1].keys()))
-
     for idx, (u, v, attrs) in enumerate(graph.edges(data=True)):
-        new_attrs = {key: attrs.get(key) for key in edge_attrs}
+        new_attrs = {}
+
+        # Only care about `type` and `outside` for now
+        new_attrs["type"] = EDGE_TYPES.get(attrs.get("type", "transition"), 0)
+        new_attrs["outside"] = 1 if attrs.get("outside", False) else 0
+
         attrs.clear()
         nx.set_edge_attributes(graph, {(u, v): new_attrs})
 
