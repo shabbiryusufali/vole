@@ -35,7 +35,6 @@ from torch_geometric.data import Data
 
 
 PARENT = pathlib.Path(__file__).parent.resolve()
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NODE_FEATS = [
     "call",
     "ret",
@@ -53,13 +52,14 @@ class IREmbeddings:
         self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
         self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
         self.embeddings = EmbeddingsWrapper(self.vocab)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Patch the resolution of the model's source at runtime
         sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
 
         # TODO: Figure out if it's possible to load the model with weights_only=True
         self.vexir2vec = torch.load(
-            self.model, map_location=DEVICE, weights_only=False
+            self.model, map_location=self.device, weights_only=False
         )
         self.vexir2vec.eval()
 
@@ -155,11 +155,11 @@ class IREmbeddings:
 
             for data in dataloader:
                 with torch.no_grad():
-                    opc_emb = data[0].to(DEVICE)
-                    ty_emb = data[1].to(DEVICE)
-                    arg_emb = data[2].to(DEVICE)
-                    str_emb = data[3].to(DEVICE)
-                    lib_emb = data[4].to(DEVICE)
+                    opc_emb = data[0].to(self.device)
+                    ty_emb = data[1].to(self.device)
+                    arg_emb = data[2].to(self.device)
+                    str_emb = data[3].to(self.device)
+                    lib_emb = data[4].to(self.device)
 
                     # NOTE: [1, 100]
                     res, _ = self.vexir2vec(
@@ -211,7 +211,7 @@ class IREmbeddings:
                     [counter.get(feat, 0) for feat in NODE_FEATS],
                     dtype=np.float32,
                 )
-                node_tens = torch.tensor(node_vec).to(DEVICE)
+                node_tens = torch.tensor(node_vec).to(self.device)
                 node_tens = node_tens.unsqueeze(0)
 
                 # NOTE: [1, 108]
