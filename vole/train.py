@@ -7,7 +7,7 @@ from utils.cfg import get_project_cfg
 from utils.embeddings import IREmbeddings
 from utils.train import get_corpus_splits
 
-from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torch_geometric.nn.models import GCN
 
 # Silence angr
@@ -60,29 +60,38 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     # in channels needs to be changed most likely
     # out channels is 2 for binary classification
-    model = GCN(in_channels=training_data[0].num_features, out_channels=2, num_layers=3)
+    model = GCN(in_channels=training_data[0].num_features, out_channels=2, hidden_channels=16, num_layers=3)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss()
 
     model.train()
+
+    logger.info("Starting model training")
     
     for epoch in range(100):
         total_loss = 0
         for batch in train_loader:
+            batch = batch.to(ir_embed.device)
+            
             optimizer.zero_grad()
 
             # might need to do pooling for graph level classification (GCN might handle it)
-            out = model(batch.x, batch.edge_index, batch.batch)
+            out = model(batch.x, batch.edge_index)
             loss = criterion(out, batch.y.view(-1))
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
         
     model.eval()
+
+    logger.info("Model training complete")
+
     correct = 0
     total = 0
     
+    logger.info("Starting model test")
+
     with torch.no_grad():
         for batch in test_loader:
             out = model(batch.x, batch.edge_index, batch.batch)
@@ -90,7 +99,8 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
             correct += (pred == batch.y.view(-1)).sum().item()
             total += batch.y.size(0)
     
-    print(f"Test Accuracy: {correct / total:.4f}")
+    logger.info("Model testing complete")
+    logger.info(f"Test Accuracy: {correct / total:.4f}")
 
 
 def save_model(model):
