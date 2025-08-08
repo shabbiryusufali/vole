@@ -74,7 +74,6 @@ class IREmbeddings:
         extern_funcs = self.embeddings.process_extern_calls(funcs, proj)
 
         func_embeds = {}
-        func_embeds = {}
 
         for func, sub_cfg in get_sub_cfgs(cfg):
             str_refs = self.embeddings.process_string_refs(func, False)
