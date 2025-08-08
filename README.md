@@ -1,4 +1,4 @@
-# cmpt-479-project
+# VOLE (Vulnerability Observance and Learning-based Exploitation)
 
 ## Setting up VOLE for development
 
