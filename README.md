@@ -1,63 +1,56 @@
-# cmpt-479-project
+# VOLE (Vulnerability Observance and Learning-based Exploitation)
 
 ## Setting up VOLE for development
 
 ### Requirements
 
+- Linux/WSL (macOS and Windows are not supported)
 - Python 3.11+
 - pip
 
 ### Optional
 
-- Docker
-- [PyPy](https://pypy.org)
-- [Rust](https://www.rust-lang.org/)
+> [!NOTE]
+> Docker is required if your system does not support GCC 15.1 or later.
+
+> [!NOTE]
+> If you do not have a CUDA or ROCm compatible GPU, you can skip the NVIDIA/AMD requirements.
+
+- [Docker](https://www.docker.com/)
+- [CUDA 12.9+ (NVIDIA GPUs)](https://developer.nvidia.com/cuda-downloads)
+- [ROCm 6.4+ (AMD GPUs)](https://rocm.docs.amd.com/en/latest/)
 
 ### Installation and Setup
 
-#### 1. (Optional) PyPy 
-
-1. Navigate to https://pypy.org/download.html
-2. Download the latest precompiled binary for your platform
-3. Extract the binary from the archive (`tar xz <pypy-version>.tar.bz2`)
-4. Add a symlink from `/usr/local/bin/pypy` to `path/to/pypy-version/bin/pypy` (`ln -s path/to/pypy-version/bin/pypy /usr/local/bin/pypy`)
-  1. Alternatively, add PyPy to `PATH` by modifying `~/.bashrc` (`export PATH="$PATH:path/to/pypy-version/bin"`)
-
-#### 2. (Optional) Rust
-
-> [!note]
-> Rust is required to build Angr's dependencies using PyPy
-
-1. Navigate to https://www.rust-lang.org/tools/install (or https://forge.rust-lang.org/infra/other-installation-methods.html)
-2. Follow the provided instructions for your platform
-
-#### 3. Venv
-
-> [!NOTE]
-> If using PyPy, replace `python` with `pypy`
+#### 1. Venv
 
 ```bash
 python -m venv ./venv
 source ./venv/bin/activate
 ```
 
-#### 4. Installing Dependencies
-
-> [!NOTE]
-> If using PyPy, replace `python` with `pypy`
+#### 2. Installing Dependencies
 
 ```bash
 python -m ensurepip
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-nvidia.txt # (Optional) For NVIDIA GPUs
+python -m pip install -r requirements-amd.txt # (Optional) For AMD GPUs
 ```
 
-#### 5. Acquiring Training Data
+#### 3. Setup the FastText model and SARD dataset
+
+```bash
+python setup.py
+```
+
+#### 4. Acquiring Training Data
 
 > [!NOTE]
 > For consistent results, compile the training data with GCC 15.1
 > A Dockerfile has been supplied to ensure a reproducible environment
 
-1. `cd` into `data/SARD` and run `download.sh`
+1. Ensure you are in the root directory of the repository
 2. (Optional) Build the Docker image with `docker build -t vole-env:latest .`
 3. Compile the target CWEs per CWE-ID by running:
   a. Bare metal: `python vole/make.py <CWE-ID> data/SARD`

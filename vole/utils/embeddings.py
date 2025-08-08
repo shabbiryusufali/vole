@@ -16,13 +16,36 @@ import utils.vexir2vec.model_OTA  # NOTE: MUST be imported this way
 from angr import Project
 from angr.analyses.cfg import CFGFast
 from angr.knowledge_plugins.functions import Function
-from pyvex.stmt import IRStmt, AbiHint, IMark, NoOp
+from collections import Counter
+from pyvex.stmt import (
+    IRStmt,
+    AbiHint,
+    IMark,
+    NoOp,
+    LoadG,
+    Store,
+    StoreG,
+    Put,
+    PutI,
+    WrTmp,
+    Dirty,
+)
 from torch.utils.data import TensorDataset, DataLoader
 from torch_geometric.data import Data
 
 
 PARENT = pathlib.Path(__file__).parent.resolve()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+NODE_FEATS = [
+    "call",
+    "ret",
+    "boring",
+    "syscall",
+    "load",
+    "store",
+    "dirty",
+    "statement",
+]
 
 
 class IREmbeddings:
@@ -42,14 +65,15 @@ class IREmbeddings:
 
     def get_function_embeddings(
         self, proj: Project, cfg: CFGFast
-    ) -> list[Data]:
+    ) -> dict[int, Data]:
         """
+        Returns a dictionary of address-embedding pairs
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
         funcs = [func for func in cfg.functions.values()]
         extern_funcs = self.embeddings.process_extern_calls(funcs, proj)
 
-        embeddings = []
+        func_embeds = {}
 
         for func, sub_cfg in get_sub_cfgs(cfg):
             str_refs = self.embeddings.process_string_refs(func, False)
@@ -89,7 +113,13 @@ class IREmbeddings:
                         self.embeddings.dim, dtype=np.float32
                     )
 
-                    if not all((block, block.vex, block.vex.has_statements)):
+                    if not block:
+                        continue
+
+                    if not block.vex:
+                        continue
+
+                    if not block.vex.has_statements:
                         continue
 
                     inst_list = [
@@ -121,7 +151,8 @@ class IREmbeddings:
                 num_workers=12,
             )
 
-            ir_vec = []
+            ir_tens = []
+
             for data in dataloader:
                 with torch.no_grad():
                     opc_emb = data[0].to(DEVICE)
@@ -130,20 +161,70 @@ class IREmbeddings:
                     str_emb = data[3].to(DEVICE)
                     lib_emb = data[4].to(DEVICE)
 
+                    # NOTE: [1, 100]
                     res, _ = self.vexir2vec(
                         opc_emb, ty_emb, arg_emb, str_emb, lib_emb
                     )
-                    ir_vec.extend(res.squeeze(0))
+                    ir_tens.append(res.squeeze(0))
+
+            ir_tens = torch.stack(ir_tens)
 
             for node in sub_cfg.nodes():
+                counter = Counter()
+                cfg_node = cfg.model.get_any_node(node.addr)
+
+                if cfg_node:
+                    block = cfg_node.block
+
+                    if block:
+                        irsb = block.vex
+
+                        if irsb:
+                            if irsb.jumpkind == "Ijk_Call":
+                                counter["call"] += 1
+
+                            if irsb.jumpkind == "Ijk_Ret":
+                                counter["ret"] += 1
+
+                            if irsb.jumpkind == "Ijk_Boring":
+                                counter["boring"] += 1
+
+                            if irsb.jumpkind.startswith("Ijk_Sys"):
+                                counter["syscall"] += 1
+
+                            if irsb.has_statements:
+                                for stmt in irsb.statements:
+                                    counter["statement"] += 1
+
+                                    if isinstance(stmt, (LoadG)):
+                                        counter["load"] += 1
+
+                                    if isinstance(
+                                        stmt, (Store, StoreG, Put, PutI, WrTmp)
+                                    ):
+                                        counter["store"] += 1
+
+                                    if isinstance(stmt, (Dirty)):
+                                        counter["dirty"] += 1
+
+                node_vec = np.array(
+                    [counter.get(feat, 0) for feat in NODE_FEATS],
+                    dtype=np.float32,
+                )
+                node_tens = torch.tensor(node_vec).to(DEVICE)
+                node_tens = node_tens.unsqueeze(0)
+
+                # NOTE: [1, 108]
+                combined = torch.cat([ir_tens, node_tens], dim=1)
+
                 # Insert features as node attributes
                 # This ensures the values are preserved by torch later
                 insert_node_attributes(sub_cfg, {node: {"y": label}})
-                insert_node_attributes(sub_cfg, {node: {"x": ir_vec}})
+                insert_node_attributes(sub_cfg, {node: {"x": combined}})
 
-            embeddings.append(to_torch_data(sub_cfg))
+            func_embeds[func.addr] = to_torch_data(sub_cfg)
 
-        return embeddings
+        return func_embeds
 
 
 class EmbeddingsWrapper(SymbolicEmbeddings):
