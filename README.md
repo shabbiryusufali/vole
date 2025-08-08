@@ -33,7 +33,7 @@ source ./venv/bin/activate
 
 ```bash
 python -m ensurepip
-python -m pip install -r requirements.txt # ALWAYS RUN THIS ONE 
+python -m pip install -r requirements.txt
 python -m pip install -r requirements-nvidia.txt # (Optional) For NVIDIA GPUs
 python -m pip install -r requirements-amd.txt # (Optional) For AMD GPUs
 ```
