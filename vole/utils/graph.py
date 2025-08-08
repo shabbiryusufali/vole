@@ -48,6 +48,8 @@ def to_torch_data(graph: nx.Graph) -> Data:
     """
     Convert `graph` to an instance of `torch_geometric.data.Data`
     NOTE: Edges must be normalized in order for `from_networkx` to play nice
+    NOTE: Node labels must be relabelled
     """
     normalize_edge_attributes(graph)
+    nx.convert_node_labels_to_integers(graph)
     return convert.from_networkx(graph)
