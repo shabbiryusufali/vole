@@ -36,6 +36,16 @@ from torch_geometric.data import Data
 
 PARENT = pathlib.Path(__file__).parent.resolve()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+NODE_FEATS = [
+    "call",
+    "ret",
+    "boring",
+    "syscall",
+    "load",
+    "store",
+    "dirty",
+    "statement",
+]
 
 
 class IREmbeddings:
@@ -57,6 +67,7 @@ class IREmbeddings:
         self, proj: Project, cfg: CFGFast
     ) -> dict[int, Data]:
         """
+        Returns a dictionary of address-embedding pairs
         NOTE: Adapted from VexIR2Vec/embeddings/vexNet/embeddings.py/processFunc()
         """
         funcs = [func for func in cfg.functions.values()]
@@ -196,18 +207,8 @@ class IREmbeddings:
                                     if isinstance(stmt, (Dirty)):
                                         counter["dirty"] += 1
 
-                node_feats = [
-                    "call",
-                    "ret",
-                    "boring",
-                    "syscall",
-                    "load",
-                    "store",
-                    "dirty",
-                    "statement",
-                ]
                 node_vec = np.array(
-                    [counter.get(feat, 0) for feat in node_feats],
+                    [counter.get(feat, 0) for feat in NODE_FEATS],
                     dtype=np.float32,
                 )
                 node_tens = torch.tensor(node_vec).to(DEVICE)
