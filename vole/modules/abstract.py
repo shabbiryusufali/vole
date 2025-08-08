@@ -1,4 +1,7 @@
+from angr import Project
 from abc import ABC, abstractmethod
+from angr.analyses.cfg import CFGFast
+from torch_geometric.data import Data
 
 
 class Module(ABC):
@@ -24,9 +27,15 @@ class Module(ABC):
     def description(self):
         pass
 
-    def set_project(self, project):
+    def set_project(self, project: Project):
         self.project = project
 
+    def set_cfg(self, cfg: CFGFast):
+        self.cfg = cfg
+
+    def set_embeds(self, embeds: dict[int, Data]):
+        self.embeds = embeds
+
     @abstractmethod
-    def execute(self) -> str:
+    def execute(self) -> tuple[int, str]:
         pass
