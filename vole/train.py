@@ -86,8 +86,19 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     )
     model.to(device)
 
+    labels = torch.cat([data.y for data in training_data])
+    labels.to(device)
+
+    class_counts = torch.bincount(labels)
+    class_counts.to(device)
+
+    weights = class_counts.sum() / (len(class_counts) * class_counts.float())
+    weights.to(device)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = torch.nn.CrossEntropyLoss()
+
+    criterion = torch.nn.CrossEntropyLoss(weight=weights)
+    criterion.to(device)
 
     model.train()
 
