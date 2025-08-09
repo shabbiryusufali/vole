@@ -57,18 +57,15 @@ NODE_FEATS = [
 
 
 class IREmbeddings:
-    def __init__(self):
+    def __init__(self, device):
         self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
         self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
         self.embeddings = EmbeddingsWrapper(self.vocab)
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        self.device = device
 
         # Patch the resolution of the model's source at runtime
         sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
 
-        # TODO: Figure out if it's possible to load the model with weights_only=True
         self.vexir2vec = torch.load(
             self.model, map_location=self.device, weights_only=False
         )

@@ -63,7 +63,8 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
             """
         )
 
-    ir_embed = IREmbeddings()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ir_embed = IREmbeddings(device)
 
     logger.info("Preparing training data")
     training_data = prepare_data_for_split(train, ir_embed)
@@ -82,7 +83,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
         num_layers=3,
         add_self_loops=False,
     )
-    model.to(ir_embed.device)
+    model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     criterion = torch.nn.CrossEntropyLoss()
@@ -94,7 +95,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     for epoch in range(100):
         total_loss = 0
         for batch in train_loader:
-            batch = batch.to(ir_embed.device)
+            batch = batch.to(device)
             optimizer.zero_grad()
             out = model(batch.x, batch.edge_index)
             loss = criterion(out, batch.y.view(-1))
@@ -113,7 +114,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     with torch.no_grad():
         for batch in test_loader:
-            batch = batch.to(ir_embed.device)
+            batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
             pred = out.argmax(dim=1)
             correct += (pred == batch.y.view(-1)).sum().item()
