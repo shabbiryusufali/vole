@@ -1,6 +1,28 @@
+import random
 import argparse
 import pathlib
 import subprocess
+
+
+CCS = ["gcc", "clang"]
+GCCS = [10, 11, 12]
+CLANGS = [12, 12, 14]
+OPTS = ["O0", "O1", "O2"]
+
+
+def choose_compiler() -> tuple[str, str]:
+    cc = random.choice(CCS)
+
+    if cc == CCS[0]:
+        version = random.choice(GCCS)
+        return f"{cc}-{version}", f"g++-{version}"
+    else:
+        version = random.choice(CLANGS)
+        return f"{cc}-{version}", f"{cc}++-{version}"
+
+
+def choose_opt():
+    return random.choice(OPTS)
 
 
 def make(cwe_id: str, path: str) -> None:
@@ -12,7 +34,18 @@ def make(cwe_id: str, path: str) -> None:
     pattern = f"{cwe_id}*/**/Makefile"
 
     for makedir in path.rglob(pattern):
-        subprocess.run(["make", "-C", makedir.parent])
+        cc, cpp = choose_compiler()
+        opt = choose_opt()
+        subprocess.run(
+            [
+                "make",
+                "-C",
+                makedir.parent,
+                f"CC={cc}",
+                f"CPP={cpp}",
+                f"CFLAGS=-c -{opt}",
+            ]
+        )
 
 
 def clean(cwe_id: str, path: str) -> None:
