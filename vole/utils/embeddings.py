@@ -52,7 +52,9 @@ class IREmbeddings:
         self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
         self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
         self.embeddings = EmbeddingsWrapper(self.vocab)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
         # Patch the resolution of the model's source at runtime
         sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
@@ -81,15 +83,9 @@ class IREmbeddings:
             blocks = {block.addr: block for block in func.blocks}
             block_walks = self.embeddings.randomWalk(func, blocks.keys())
 
-            label = (
-                0
-                if not func.name
-                else 1
-                if "bad" in func.name
-                else 2
-                if "good" in func.name
-                else 0
-            )
+            # 1 == "bad", 0 = "good"
+            # NOTE: Assume bad if proper label can't be deduced
+            label = 1 if "bad" in func.name else 0 if "good" in func.name else 1
 
             func_opc_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
             func_ty_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
@@ -165,8 +161,10 @@ class IREmbeddings:
                     res, _ = self.vexir2vec(
                         opc_emb, ty_emb, arg_emb, str_emb, lib_emb
                     )
+                    # NOTE: [100]
                     ir_tens.append(res.squeeze(0))
 
+            # NOTE: [1, 100]
             ir_tens = torch.stack(ir_tens)
 
             for node in sub_cfg.nodes():
@@ -216,6 +214,9 @@ class IREmbeddings:
 
                 # NOTE: [1, 108]
                 combined = torch.cat([ir_tens, node_tens], dim=1)
+
+                # NOTE: [108]
+                combined = combined.squeeze(0)
 
                 # Insert features as node attributes
                 # This ensures the values are preserved by torch later
