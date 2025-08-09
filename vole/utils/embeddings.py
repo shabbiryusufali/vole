@@ -29,6 +29,7 @@ from pyvex.stmt import (
     PutI,
     WrTmp,
     Dirty,
+    Exit
 )
 from torch.utils.data import TensorDataset, DataLoader
 from torch_geometric.data import Data
@@ -36,14 +37,22 @@ from torch_geometric.data import Data
 
 PARENT = pathlib.Path(__file__).parent.resolve()
 NODE_FEATS = [
-    "call",
     "ret",
+    "refs",
+    "call",
+    "exit",
+    "load",
+    "dirty",
+    "store",
     "boring",
     "syscall",
-    "load",
-    "store",
-    "dirty",
-    "statement",
+    "constants",
+    "operations",
+    "successors",
+    "statements",
+    "expressions",
+    "instructions",
+    "predecessors"
 ]
 
 
@@ -167,17 +176,27 @@ class IREmbeddings:
             # NOTE: [1, 100]
             ir_tens = torch.stack(ir_tens)
 
+            # Encode per-node information for some variance
             for node in sub_cfg.nodes():
                 counter = Counter()
                 cfg_node = cfg.model.get_any_node(node.addr)
 
                 if cfg_node:
+                    counter["successors"] += len(cfg_node.successors)
+                    counter["predecessors"] += len(cfg_node.predecessors)
+                    counter["refs"] += len(list(cfg_node.get_data_references()))
+                    
                     block = cfg_node.block
 
                     if block:
                         irsb = block.vex
 
                         if irsb:
+                            counter["expressions"] += len(list(irsb.expressions))
+                            counter["instructions"] += irsb.instructions
+                            counter["operations"] += len(irsb.operations)
+                            counter["constants"] += len(irsb.constants)
+
                             if irsb.jumpkind == "Ijk_Call":
                                 counter["call"] += 1
 
@@ -192,7 +211,7 @@ class IREmbeddings:
 
                             if irsb.has_statements:
                                 for stmt in irsb.statements:
-                                    counter["statement"] += 1
+                                    counter["statements"] += 1
 
                                     if isinstance(stmt, (LoadG)):
                                         counter["load"] += 1
@@ -205,6 +224,9 @@ class IREmbeddings:
                                     if isinstance(stmt, (Dirty)):
                                         counter["dirty"] += 1
 
+                                    if isinstance(stmt, (Exit)):
+                                        counter["exit"] += 1
+
                 node_vec = np.array(
                     [counter.get(feat, 0) for feat in NODE_FEATS],
                     dtype=np.float32,
@@ -212,10 +234,10 @@ class IREmbeddings:
                 node_tens = torch.tensor(node_vec).to(self.device)
                 node_tens = node_tens.unsqueeze(0)
 
-                # NOTE: [1, 108]
+                # NOTE: [1, 116]
                 combined = torch.cat([ir_tens, node_tens], dim=1)
 
-                # NOTE: [108]
+                # NOTE: [116]
                 combined = combined.squeeze(0)
 
                 # Insert features as node attributes
