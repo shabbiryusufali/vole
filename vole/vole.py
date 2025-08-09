@@ -1,3 +1,4 @@
+import torch
 import argparse
 import logging
 import pathlib
@@ -62,7 +63,9 @@ def parse() -> dict:
 
 def main():
     args = parse()
-    ir_embed = IREmbeddings()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ir_embed = IREmbeddings(device)
 
     # Configure logger with supplied verbosity level
     level = LOGLEVEL.get(args.get("verbosity"))
@@ -81,6 +84,7 @@ def main():
     for idx, module in enumerate(modules):
         logger.info(f"Running module {idx + 1}/{len(modules)}")
 
+        module = module()
         module.set_project(proj)
         module.set_cfg(cfg)
         module.set_embeds(embeds)

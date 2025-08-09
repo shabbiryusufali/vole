@@ -11,6 +11,8 @@ class Module(ABC):
 
     def __init__(self):
         self.project = None
+        self.cfg = None
+        self.embeds = None
 
     @property
     @abstractmethod
