@@ -84,17 +84,15 @@ def main():
     for idx, module in enumerate(modules):
         logger.info(f"Running module {idx + 1}/{len(modules)}")
 
-        module = module()
-        module.set_project(proj)
-        module.set_cfg(cfg)
-        module.set_embeds(embeds)
+        module = module(project=proj, cfg=cfg, device=device, embeddings=embeds)
 
         addr, warn = module.execute()
 
         addrs.append(addr)
         warns.append(warn)
 
-        logger.warning(warn)
+        if warn:
+            logger.warning(warn)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ import numpy as np
 from utils.io import crawl
 
 
-
 def get_corpus_splits(
     cwe_id: str, path: pathlib.Path
 ) -> tuple[list, list, list]:
