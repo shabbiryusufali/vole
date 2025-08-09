@@ -1,10 +1,8 @@
-import torch
 import pathlib
 import numpy as np
 
 from utils.io import crawl
 
-from torch_geometric.nn.models import GCN
 
 
 def get_corpus_splits(
@@ -25,12 +23,3 @@ def get_corpus_splits(
 
     half = len(full) // 2
     return full[:half], full[half:]
-
-
-def save_model(model, out_path: pathlib.Path) -> None:
-    torch.save(model.state_dict(), out_path)
-
-
-def load_model(model, in_path: pathlib.Path) -> GCN:
-    model.load_state_dict(torch.load(in_path, weights_only=True))
-    return model

@@ -6,10 +6,7 @@ import argparse
 
 from utils.cfg import get_project_cfg
 from utils.embeddings import IREmbeddings
-from utils.train import (
-    get_corpus_splits,
-    save_model,
-)
+from utils.train import get_corpus_splits
 
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn.models import GCN
@@ -130,6 +127,10 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     out_path = pathlib.Path(PARENT / f"./models/{cwe_id.upper()}.model")
     logger.info(f"Saving model to {out_path}")
     save_model(model, out_path)
+
+
+def save_model(model, out_path: pathlib.Path) -> None:
+    torch.save(model.state_dict(), out_path)
 
 
 def parse() -> dict:
