@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+PARENT = pathlib.Path(__file__).parent.resolve()
+
+
 def prepare_data_for_split(
     split: list[pathlib.Path], ir_embed: IREmbeddings
 ) -> list:
@@ -119,10 +122,13 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     logger.info("Model testing complete")
     logger.info(f"Test Accuracy: {correct / total:.4f}")
 
+    out_path = pathlib.Path(PARENT / f"./models/{cwe_id.upper()}.model")
+    logger.info(f"Saving model to {out_path}")
+    save_model(model, out_path)
 
-def save_model(model):
-    # TODO: save model one we have one for good accuracy to use in the actual tool
-    pass
+
+def save_model(model, out_path: pathlib.Path):
+    torch.save(model.state_dict(), out_path)
 
 
 def parse() -> dict:
