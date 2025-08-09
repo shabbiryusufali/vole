@@ -1,5 +1,4 @@
-# Older GCC versions produce different results
-FROM gcc:15.1
+FROM gcc:12.5
 
 # Expect to run Python scripts
 RUN apt update -y \

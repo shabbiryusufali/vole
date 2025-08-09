@@ -1,17 +1,23 @@
-# VOLE (Vulnerability Observance and Learning-based Exploitation)
+<h1 align="center">VOLE (Vulnerability Observance and Learning-based Exploitation)</h1>
+
+---
+
+VOLE is a tool for detecting common bug classes in program binaries. It leverages:
+
+- [angr](https://github.com/angr/angr) for symbolic execution, control-flow graph (CFG) recovery, and intermediate representation (IR) lifting
+- [VEXIR2Vec](https://arxiv.org/abs/2312.00507) to derive vector embeddings of IR
+- [Graph Convolutional Networks](https://arxiv.org/abs/1609.02907) for classification
+- [NIST SARD Juliet](https://samate.nist.gov/SARD/test-suites/112) as training data
 
 ## Setting up VOLE for development
 
 ### Requirements
 
-- Linux/WSL (macOS and Windows are not supported)
+- Linux/WSL (macOS and Windows currently unsupported)
 - Python 3.11+
 - pip
 
 ### Optional
-
-> [!NOTE]
-> Docker is required if your system does not support GCC 15.1 or later.
 
 > [!NOTE]
 > If you do not have a CUDA or ROCm compatible GPU, you can skip the NVIDIA/AMD requirements.
@@ -47,14 +53,24 @@ python setup.py
 #### 4. Acquiring Training Data
 
 > [!NOTE]
-> For consistent results, compile the training data with GCC 15.1
-> A Dockerfile has been supplied to ensure a reproducible environment
+> For consistency, a Dockerfile has been provided to compile the SARD test cases
 
-1. Ensure you are in the root directory of the repository
-2. (Optional) Build the Docker image with `docker build -t vole-env:latest .`
-3. Compile the target CWEs per CWE-ID by running:
-  a. Bare metal: `python vole/make.py <CWE-ID> data/SARD`
-  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env vole-env python3 vole/make.py CWE<ID> data/SARD`
+From the root directory of the repository:
+
+1. (Optional) Build the Docker image with `docker build -t sard-env:latest data/SARD`
+2. Compile the target CWEs per CWE-ID by running:
+  a. Bare metal: `python vole/make.py CWE<ID> data/SARD`
+  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 vole/make.py CWE<ID> data/SARD`
+
+##### 5. (Optional) Acquiring Evaluation Data
+
+> [!NOTE]
+> Building the DARPA Cyber Grand Challenge (CGC) data requires a preconfigured environment (such as that which we have provided in the form of another Dockerfile!)
+
+1. Build the Docker image with `docker build -t cgc-env:latest data/CGC`
+2. Compile the target challenges per ID by running:
+  a. Bare metal: `python vole/make.py <ID> data/CGC`
+  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env cgc-env python3 vole/make.py <ID> data/CGC`
 
 ### Contributing Changes
 

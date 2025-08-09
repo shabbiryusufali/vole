@@ -4,8 +4,8 @@ venv-nvidia/
 venv-amd/
 venv-cpu/
 
-# Ignore the SARD dataset itself but not the download script!
-data/*
+data/CGC/[!Dockerfile]**
+data/SARD/[!Dockerfile]**
 
 # Ignore big models (that should be installed by the end user)
 vole/models/cc.en.100.bin
