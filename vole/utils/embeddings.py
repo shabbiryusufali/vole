@@ -82,13 +82,13 @@ class IREmbeddings:
             block_walks = self.embeddings.randomWalk(func, blocks.keys())
 
             label = (
-                -1
+                0
                 if not func.name
                 else 1
                 if "bad" in func.name
-                else 0
+                else 2
                 if "good" in func.name
-                else -1
+                else 0
             )
 
             func_opc_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
