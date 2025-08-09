@@ -62,6 +62,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
             Check that `path` contains the compiled test cases.
             """
         )
+        return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ir_embed = IREmbeddings(device)
