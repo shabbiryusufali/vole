@@ -72,20 +72,20 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
     logger.info("Preparing test data")
     test_data = prepare_data_for_split(test, ir_embed)
 
-    train_loader = DataLoader(training_data, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
+    train_loader = DataLoader(training_data, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
 
     # Binary classifier
     model = GCN(
         in_channels=training_data[0].num_features,
         out_channels=2,
-        hidden_channels=16,
-        num_layers=3,
+        hidden_channels=128,
+        num_layers=4,
         add_self_loops=False,
     )
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = torch.nn.CrossEntropyLoss()
 
     model.train()
