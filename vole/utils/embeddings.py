@@ -29,7 +29,7 @@ from pyvex.stmt import (
     PutI,
     WrTmp,
     Dirty,
-    Exit
+    Exit,
 )
 from torch.utils.data import TensorDataset, DataLoader
 from torch_geometric.data import Data
@@ -52,7 +52,7 @@ NODE_FEATS = [
     "statements",
     "expressions",
     "instructions",
-    "predecessors"
+    "predecessors",
 ]
 
 
@@ -182,14 +182,16 @@ class IREmbeddings:
                     counter["successors"] += len(cfg_node.successors)
                     counter["predecessors"] += len(cfg_node.predecessors)
                     counter["refs"] += len(list(cfg_node.get_data_references()))
-                    
+
                     block = cfg_node.block
 
                     if block:
                         irsb = block.vex
 
                         if irsb:
-                            counter["expressions"] += len(list(irsb.expressions))
+                            counter["expressions"] += len(
+                                list(irsb.expressions)
+                            )
                             counter["instructions"] += irsb.instructions
                             counter["operations"] += len(irsb.operations)
                             counter["constants"] += len(irsb.constants)

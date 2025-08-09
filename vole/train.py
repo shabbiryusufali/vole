@@ -36,7 +36,7 @@ def prepare_data_for_split(
 
     for idx, path in enumerate(split):
         logger.info(
-            f"[{str(idx).rjust(split_digits)}/{split_len}] Processing path: {path}"
+            f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}"
         )
 
         proj, cfg = get_project_cfg(path)
