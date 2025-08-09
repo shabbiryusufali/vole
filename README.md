@@ -47,14 +47,14 @@ python setup.py
 #### 4. Acquiring Training Data
 
 > [!NOTE]
-> For consistent results, compile the training data with GCC 15.1
-> A Dockerfile has been supplied to ensure a reproducible environment
+> For consistency, a Dockerfile has been provided to compile the SARD test cases
 
-1. Ensure you are in the root directory of the repository
-2. (Optional) Build the Docker image with `docker build -t vole-env:latest .`
-3. Compile the target CWEs per CWE-ID by running:
-  a. Bare metal: `python vole/make.py <CWE-ID> data/SARD`
-  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env vole-env python3 vole/make.py CWE<ID> data/SARD`
+From the root directory of the repository:
+
+1. (Optional) Build the Docker image with `docker build -t sard-env:latest data/SARD`
+2. Compile the target CWEs per CWE-ID by running:
+  a. Bare metal: `python vole/make.py CWE<ID> data/SARD`
+  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 vole/make.py CWE<ID> data/SARD`
 
 ### Contributing Changes
 
