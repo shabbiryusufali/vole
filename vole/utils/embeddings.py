@@ -83,7 +83,7 @@ class IREmbeddings:
             blocks = {block.addr: block for block in func.blocks}
             block_walks = self.embeddings.randomWalk(func, blocks.keys())
 
-            # 1 == "bad", 0 = "good"
+            # Binary classification (1 == "bad", 0 == "good")
             # NOTE: Assume bad if proper label can't be deduced
             label = 1 if "bad" in func.name else 0 if "good" in func.name else 1
 

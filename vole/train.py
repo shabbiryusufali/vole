@@ -1,3 +1,4 @@
+import math
 import torch
 import logging
 import pathlib
@@ -24,12 +25,22 @@ logger.setLevel(logging.INFO)
 def prepare_data_for_split(
     split: list[pathlib.Path], ir_embed: IREmbeddings
 ) -> list:
-    split_data = []
+    logger.info("Starting data preprocessing")
 
-    for path in split:
+    split_data = []
+    split_len = len(split)
+    split_digits = int(math.log10(split_len)) + 1
+
+    for idx, path in enumerate(split):
+        logger.info(
+            f"[{str(idx).rjust(split_digits)}/{split_len}] Processing path: {path}"
+        )
+
         proj, cfg = get_project_cfg(path)
         embeddings = ir_embed.get_function_embeddings(proj, cfg)
         split_data.extend(embeddings.values())
+
+    logger.info("Data preprocessing complete")
 
     return split_data
 
@@ -51,15 +62,16 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
 
     ir_embed = IREmbeddings()
 
-    # possible model training code (i can't test it rn | model assuming graph level labelling)
+    logger.info("Preparing training data")
     training_data = prepare_data_for_split(train, ir_embed)
+
+    logger.info("Preparing test data")
     test_data = prepare_data_for_split(test, ir_embed)
 
     train_loader = DataLoader(training_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32, shuffle=False)
 
-    # in channels needs to be changed most likely
-    # out channels is 2 for binary classification
+    # Binary classifier
     model = GCN(
         in_channels=training_data[0].num_features,
         out_channels=2,
