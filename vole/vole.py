@@ -77,8 +77,8 @@ def main():
     # Extract vector embeddings for each function
     embeds = ir_embed.get_function_embeddings(proj, cfg)
 
-    addrs = []
     warns = []
+    vulns = {}
 
     # Run each module and collect warnings + interesting addresses
     for idx, module in enumerate(modules):
@@ -86,13 +86,12 @@ def main():
 
         module = module(project=proj, cfg=cfg, device=device, embeddings=embeds)
 
-        addr, warn = module.execute()
+        res = module.execute()
 
-        addrs.append(addr)
-        warns.append(warn)
-
-        if warn:
-            logger.warning(warn)
+        if res:
+            vuln, warn = res
+            vulns.update(vuln)
+            warns.append(warn)
 
 
 if __name__ == "__main__":

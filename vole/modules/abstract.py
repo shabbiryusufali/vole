@@ -28,5 +28,5 @@ class Module(ABC):
         pass
 
     @abstractmethod
-    def execute(self) -> tuple[int, str]:
+    def execute(self) -> tuple[dict, str] | None:
         pass
