@@ -146,7 +146,7 @@ def train_gcn(cwe_id: str, path: pathlib.Path):
         return
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ir_embed = IREmbeddings(device)
+    ir_embed = IREmbeddings(device, train=True)
 
     model = do_training(train, ir_embed, device)
     model = do_testing(test, ir_embed, device, model)

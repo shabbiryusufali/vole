@@ -57,7 +57,8 @@ NODE_FEATS = [
 
 
 class IREmbeddings:
-    def __init__(self, device):
+    def __init__(self, device, train: bool = False):
+        self.train = train
         self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
         self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
         self.embeddings = EmbeddingsWrapper(self.vocab)
@@ -84,6 +85,14 @@ class IREmbeddings:
         func_embeds = {}
 
         for func, sub_cfg in get_sub_cfgs(cfg):
+            # In training, we only want the labelled functions
+            if bool(
+                self.train and 
+                "good" not in func.name and
+                "bad" not in func.name
+            ):    
+                continue
+
             str_refs = self.embeddings.process_string_refs(func, False)
 
             blocks = {block.addr: block for block in func.blocks}
