@@ -31,5 +31,5 @@ class Module(ABC):
         return f"[{self.cwe_id}] ({self.cwe_name}) in {func.name} @ {hex(addr)}"
 
     @abstractmethod
-    def execute(self) -> tuple[dict, str] | None:
+    def execute(self) -> tuple[dict, list[str]] | None:
         pass
