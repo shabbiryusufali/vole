@@ -27,6 +27,9 @@ class Module(ABC):
     def description(self):
         pass
 
+    def warn(self, func, addr: int) -> str:
+        return f"[{self.cwe_id}] ({self.cwe_name}) in {func.name} @ {hex(addr)}"
+
     @abstractmethod
     def execute(self) -> tuple[dict, str] | None:
         pass
