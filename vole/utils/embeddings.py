@@ -87,10 +87,10 @@ class IREmbeddings:
         for func, sub_cfg in get_sub_cfgs(cfg):
             # In training, we only want the labelled functions
             if bool(
-                self.train and 
-                "good" not in func.name and
-                "bad" not in func.name
-            ):    
+                self.train
+                and "good" not in func.name
+                and "bad" not in func.name
+            ):
                 continue
 
             str_refs = self.embeddings.process_string_refs(func, False)

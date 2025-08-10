@@ -14,9 +14,7 @@ def crawl(path: pathlib.Path, pattern: str) -> Iterator[pathlib.Path]:
         yield file
 
 
-def get_corpus_splits(
-    cwe_id: str, path: pathlib.Path
-) -> tuple[list, list]:
+def get_corpus_splits(cwe_id: str, path: pathlib.Path) -> tuple[list, list]:
     """
     Reads in paths of test files from `path` corresponding to `cwe_id`,
     shuffles them, and returns a 50-50 train-test split
