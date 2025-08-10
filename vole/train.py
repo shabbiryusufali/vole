@@ -58,25 +58,26 @@ def do_training(split: list[pathlib.Path], ir_embed: IREmbeddings, device):
     model = GCN(
         in_channels=train_data[0].num_features,
         out_channels=2,
-        hidden_channels=32,
-        num_layers=4,
+        hidden_channels=64,
+        num_layers=3,
+        dropout=0.5,
         add_self_loops=False,
     )
     model.to(device)
 
     labels = torch.cat([data.y for data in train_data])
-    labels.to(device)
+    labels = labels.to(device)
 
     class_counts = torch.bincount(labels)
-    class_counts.to(device)
+    class_counts = class_counts.to(device)
 
     weights = class_counts.sum() / (len(class_counts) * class_counts.float())
-    weights.to(device)
+    weights = weights.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
 
     criterion = torch.nn.CrossEntropyLoss(weight=weights)
-    criterion.to(device)
+    criterion = criterion.to(device)
 
     logger.info("Starting model training")
 
