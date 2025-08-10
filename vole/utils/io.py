@@ -35,8 +35,8 @@ def get_corpus_splits(
 
     # Second pass: randomly select 3 variants of each binary
     # NOTE: There are 18 variants for each!
-    for _, values in matches.items():
-        full.extend(random.sample(values, 3))
+    for variants in matches.values():
+        full.extend(random.sample(variants, 3))
 
     full = np.array(full)
     np.random.shuffle(full)
