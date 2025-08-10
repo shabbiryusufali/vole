@@ -3,6 +3,7 @@ import pathlib
 
 from .abstract import Module
 
+from angr.knowledge_plugins.functions import Function
 from torch_geometric.nn.models import GCN
 
 PARENT = pathlib.Path(__file__).parent.resolve()
@@ -46,5 +47,12 @@ class CWE416(Module):
 
             if len(nodes) > 0:
                 pairs = {k: v for k, v in zip(nodes, pred) if v == 1}
-                warns = [self.warn(func, node.addr) for node in nodes]
+                
+                warns = []
+                for node in nodes:
+                    if isinstance(node, Function):
+                        warns.append(self.warn(node, node.addr))
+                    else:
+                        warns.append(self.warn(func, node.addr))
+
                 return pairs, warns
