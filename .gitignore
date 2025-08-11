@@ -11,6 +11,9 @@ data/*
 vole/models/cc.en.100.bin
 vole/models/cc.en.300.bin
 
+# TEMP: Ignore CWE*.model until we've tuned them properly
+vole/models/CWE*.model
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

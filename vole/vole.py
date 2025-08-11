@@ -1,3 +1,4 @@
+import torch
 import argparse
 import logging
 import pathlib
@@ -62,7 +63,9 @@ def parse() -> dict:
 
 def main():
     args = parse()
-    ir_embed = IREmbeddings()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ir_embed = IREmbeddings(device)
 
     # Configure logger with supplied verbosity level
     level = LOGLEVEL.get(args.get("verbosity"))
@@ -74,23 +77,21 @@ def main():
     # Extract vector embeddings for each function
     embeds = ir_embed.get_function_embeddings(proj, cfg)
 
-    addrs = []
     warns = []
+    vulns = {}
 
     # Run each module and collect warnings + interesting addresses
     for idx, module in enumerate(modules):
         logger.info(f"Running module {idx + 1}/{len(modules)}")
 
-        module.set_project(proj)
-        module.set_cfg(cfg)
-        module.set_embeds(embeds)
+        module = module(project=proj, cfg=cfg, device=device, embeddings=embeds)
 
-        addr, warn = module.execute()
+        res = module.execute()
 
-        addrs.append(addr)
-        warns.append(warn)
-
-        logger.warning(warn)
+        if res:
+            vuln, warn = res
+            vulns.update(vuln)
+            warns.append(warn)
 
 
 if __name__ == "__main__":

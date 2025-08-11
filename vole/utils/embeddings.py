@@ -29,37 +29,46 @@ from pyvex.stmt import (
     PutI,
     WrTmp,
     Dirty,
+    Exit,
 )
 from torch.utils.data import TensorDataset, DataLoader
 from torch_geometric.data import Data
 
 
 PARENT = pathlib.Path(__file__).parent.resolve()
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NODE_FEATS = [
-    "call",
     "ret",
+    "refs",
+    "call",
+    "exit",
+    "load",
+    "dirty",
+    "store",
     "boring",
     "syscall",
-    "load",
-    "store",
-    "dirty",
-    "statement",
+    "constants",
+    "operations",
+    "successors",
+    "statements",
+    "expressions",
+    "instructions",
+    "predecessors",
 ]
 
 
 class IREmbeddings:
-    def __init__(self):
+    def __init__(self, device, train: bool = False):
+        self.train = train
         self.vocab = pathlib.Path(PARENT / "./vexir2vec/vocabulary.txt")
         self.model = pathlib.Path(PARENT / "../models/vexir2vec.model")
         self.embeddings = EmbeddingsWrapper(self.vocab)
+        self.device = device
 
         # Patch the resolution of the model's source at runtime
         sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
 
-        # TODO: Figure out if it's possible to load the model with weights_only=True
         self.vexir2vec = torch.load(
-            self.model, map_location=DEVICE, weights_only=False
+            self.model, map_location=self.device, weights_only=False
         )
         self.vexir2vec.eval()
 
@@ -76,20 +85,22 @@ class IREmbeddings:
         func_embeds = {}
 
         for func, sub_cfg in get_sub_cfgs(cfg):
+            # In training, we only want the labelled functions
+            if bool(
+                self.train and 
+                "good" not in func.name and
+                "bad" not in func.name
+            ):    
+                continue
+
             str_refs = self.embeddings.process_string_refs(func, False)
 
             blocks = {block.addr: block for block in func.blocks}
             block_walks = self.embeddings.randomWalk(func, blocks.keys())
 
-            label = (
-                -1
-                if not func.name
-                else 1
-                if "bad" in func.name
-                else 0
-                if "good" in func.name
-                else -1
-            )
+            # Binary classification (1 == "bad", 0 == "good")
+            # NOTE: Assume bad if proper label can't be deduced
+            label = 1 if "bad" in func.name else 0 if "good" in func.name else 1
 
             func_opc_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
             func_ty_vec = np.zeros(self.embeddings.dim, dtype=np.float32)
@@ -155,31 +166,45 @@ class IREmbeddings:
 
             for data in dataloader:
                 with torch.no_grad():
-                    opc_emb = data[0].to(DEVICE)
-                    ty_emb = data[1].to(DEVICE)
-                    arg_emb = data[2].to(DEVICE)
-                    str_emb = data[3].to(DEVICE)
-                    lib_emb = data[4].to(DEVICE)
+                    opc_emb = data[0].to(self.device)
+                    ty_emb = data[1].to(self.device)
+                    arg_emb = data[2].to(self.device)
+                    str_emb = data[3].to(self.device)
+                    lib_emb = data[4].to(self.device)
 
                     # NOTE: [1, 100]
                     res, _ = self.vexir2vec(
                         opc_emb, ty_emb, arg_emb, str_emb, lib_emb
                     )
+                    # NOTE: [100]
                     ir_tens.append(res.squeeze(0))
 
+            # NOTE: [1, 100]
             ir_tens = torch.stack(ir_tens)
 
+            # Encode per-node information for some variance
             for node in sub_cfg.nodes():
                 counter = Counter()
                 cfg_node = cfg.model.get_any_node(node.addr)
 
                 if cfg_node:
+                    counter["successors"] += len(cfg_node.successors)
+                    counter["predecessors"] += len(cfg_node.predecessors)
+                    counter["refs"] += len(list(cfg_node.get_data_references()))
+
                     block = cfg_node.block
 
                     if block:
                         irsb = block.vex
 
                         if irsb:
+                            counter["expressions"] += len(
+                                list(irsb.expressions)
+                            )
+                            counter["instructions"] += irsb.instructions
+                            counter["operations"] += len(irsb.operations)
+                            counter["constants"] += len(irsb.constants)
+
                             if irsb.jumpkind == "Ijk_Call":
                                 counter["call"] += 1
 
@@ -194,7 +219,7 @@ class IREmbeddings:
 
                             if irsb.has_statements:
                                 for stmt in irsb.statements:
-                                    counter["statement"] += 1
+                                    counter["statements"] += 1
 
                                     if isinstance(stmt, (LoadG)):
                                         counter["load"] += 1
@@ -207,15 +232,21 @@ class IREmbeddings:
                                     if isinstance(stmt, (Dirty)):
                                         counter["dirty"] += 1
 
+                                    if isinstance(stmt, (Exit)):
+                                        counter["exit"] += 1
+
                 node_vec = np.array(
                     [counter.get(feat, 0) for feat in NODE_FEATS],
                     dtype=np.float32,
                 )
-                node_tens = torch.tensor(node_vec).to(DEVICE)
+                node_tens = torch.tensor(node_vec).to(self.device)
                 node_tens = node_tens.unsqueeze(0)
 
-                # NOTE: [1, 108]
+                # NOTE: [1, 116]
                 combined = torch.cat([ir_tens, node_tens], dim=1)
+
+                # NOTE: [116]
+                combined = combined.squeeze(0)
 
                 # Insert features as node attributes
                 # This ensures the values are preserved by torch later
