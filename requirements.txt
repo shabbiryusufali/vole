@@ -75,10 +75,10 @@ sortedcontainers==2.4.0
 SQLAlchemy==2.0.42
 stevedore==5.4.1
 sympy==1.14.0
-torch==2.8.0+cu129
+torch==2.7.1
 torch-geometric==2.6.1
 tqdm==4.67.1
-triton==3.4.0
+triton==3.3.1
 typing_extensions==4.14.1
 tzdata==2025.2
 unique_log_filter==0.1.0
