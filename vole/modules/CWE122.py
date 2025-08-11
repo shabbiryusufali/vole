@@ -9,7 +9,7 @@ from torch_geometric.nn.models import GCN
 PARENT = pathlib.Path(__file__).parent.resolve()
 
 
-class CWE416(Module):
+class CWE122(Module):
     def __init__(self, project, cfg, device, embeddings):
         super().__init__(project, cfg, device, embeddings)
         self.param_path = pathlib.Path(PARENT / "../models/CWE416/CWE416.json")
