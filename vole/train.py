@@ -1,5 +1,8 @@
+import sys
 import math
+import json
 import torch
+import optuna
 import logging
 import pathlib
 import argparse
@@ -48,69 +51,20 @@ def prepare_data_for_split(
     return split_data
 
 
-def do_training(split: list[pathlib.Path], ir_embed: IREmbeddings, device):
-    logger.info("Preparing training data")
-
-    train_data = prepare_data_for_split(split, ir_embed)
-    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
-
-    # Binary classifier
-    model = GCN(
-        in_channels=train_data[0].num_features,
-        out_channels=2,
-        hidden_channels=64,
-        num_layers=3,
-        dropout=0.5,
-        add_self_loops=False,
-    )
-    model.to(device)
-
-    labels = torch.cat([data.y for data in train_data])
-    labels = labels.to(device)
-
-    class_counts = torch.bincount(labels)
-    class_counts = class_counts.to(device)
-
-    weights = class_counts.sum() / (len(class_counts) * class_counts.float())
-    weights = weights.to(device)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
-
-    criterion = torch.nn.CrossEntropyLoss(weight=weights)
-    criterion = criterion.to(device)
-
-    logger.info("Starting model training")
-
+def do_training(model: GCN, optimizer) -> None:
     model.train()
-    for epoch in range(100):
-        total_loss = 0
-        for batch in train_loader:
-            batch = batch.to(device)
-            optimizer.zero_grad()
-            out = model(batch.x, batch.edge_index)
-            loss = criterion(out, batch.y.view(-1))
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.detach().cpu().item()
-
-    torch.cuda.empty_cache()
-
-    logger.info("Model training complete")
-
-    return model
+    for batch in train_loader:
+        batch = batch.to(device)
+        optimizer.zero_grad()
+        out = model(batch.x, batch.edge_index)
+        loss = criterion(out, batch.y.view(-1))
+        loss.backward()
+        optimizer.step()
 
 
-def do_testing(
-    split: list[pathlib.Path], ir_embed: IREmbeddings, device, model: GCN
-):
-    logger.info("Preparing test data")
-    test_data = prepare_data_for_split(split, ir_embed)
-    test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
-
+def do_testing(model: GCN) -> float:
     correct = 0
     total = 0
-
-    logger.info("Starting model test")
 
     model.eval()
     with torch.no_grad():
@@ -121,43 +75,41 @@ def do_testing(
             correct += (pred == batch.y.view(-1)).sum().item()
             total += batch.y.size(0)
 
-    torch.cuda.empty_cache()
-
-    logger.info("Model testing complete")
-    logger.info(f"Test Accuracy: {correct / total:.4f}")
-
-    return model
+    return correct / total
 
 
-def train_gcn(cwe_id: str, path: pathlib.Path):
-    """
-    Trains a `torch_geometric.nn.models.GCN` from SARD test case binaries
-    matching `cwe_id` in `path`
-    """
-    train, test = get_corpus_splits(cwe_id, path)
+def objective(trial):
+    hidden_channels = trial.suggest_int("hidden_channels", 16, 128, step=16)
+    num_layers = trial.suggest_int("num_layers", 1, 6)
+    dropout = trial.suggest_float("dropout", 1e-1, 1e0, log=True)
 
-    if not all((train, test)):
-        logger.info(
-            f"""
-            CWE-ID `{cwe_id}` and path `{path}` yielded no results.
-            Check that `path` contains the compiled test cases.
-            """
-        )
-        return
+    model = GCN(
+        in_channels=train_data[0].num_features,
+        out_channels=2,
+        hidden_channels=hidden_channels,
+        num_layers=num_layers,
+        dropout=dropout,
+        add_self_loops=False,
+    ).to(device)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ir_embed = IREmbeddings(device, train=True)
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+    optimizer_name = trial.suggest_categorical(
+        "optimizer", ["Adam", "RMSprop", "SGD"]
+    )
+    optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
 
-    model = do_training(train, ir_embed, device)
-    model = do_testing(test, ir_embed, device, model)
+    for epoch in range(100):
+        do_training(model, optimizer)
+        accuracy = do_testing(model)
 
-    out_path = pathlib.Path(PARENT / f"./models/{cwe_id.upper()}.model")
-    logger.info(f"Saving model to {out_path}")
-    save_model(model, out_path)
+        trial.report(accuracy, epoch)
 
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
 
-def save_model(model, out_path: pathlib.Path) -> None:
-    torch.save(model.state_dict(), out_path)
+    trial.set_user_attr("state", model.state_dict())
+
+    return accuracy
 
 
 def parse() -> dict:
@@ -174,10 +126,69 @@ def parse() -> dict:
     return vars(parser.parse_args())
 
 
-def main():
-    args = parse()
-    train_gcn(args.get("CWE-ID"), args.get("path"))
-
-
 if __name__ == "__main__":
-    main()
+    args = parse()
+    cwe_id = args.get("CWE-ID")
+    path = args.get("path")
+
+    train, test = get_corpus_splits(cwe_id, path)
+    if not all((train, test)):
+        logger.info(
+            f"""
+            CWE-ID `{cwe_id}` and path `{path}` yielded no results.
+            Check that `path` contains the compiled test cases.
+            """
+        )
+        sys.exit(1)
+
+    # NOTE: `device` accessed above
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ir_embed = IREmbeddings(device, train=True)
+
+    # NOTE: `train_data` and `train_loader` accessed above
+    logger.info("Preparing training data")
+    train_data = prepare_data_for_split(train, ir_embed)
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+
+    # NOTE: `criterion` accessed above
+    labels = torch.cat([data.y for data in train_data]).to(device)
+    class_counts = torch.bincount(labels).to(device)
+    weights = class_counts.sum() / (
+        len(class_counts) * class_counts.float()
+    ).to(device)
+    criterion = torch.nn.CrossEntropyLoss(weight=weights).to(device)
+
+    # NOTE: `test_loader` accessed above
+    logger.info("Preparing test data")
+    test_data = prepare_data_for_split(test, ir_embed)
+    test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
+
+    # Use optuna to maximize accuracy / parameters
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=100)
+
+    trial = study.best_trial
+    logger.info(f"Best trial completed with accuracy {trial.value:.4f}")
+
+    # Recover best model
+    model = GCN(
+        in_channels=train_data[0].num_features,
+        out_channels=2,
+        hidden_channels=trial.params.get("hidden_channels"),
+        num_layers=trial.params.get("num_layers"),
+        dropout=trial.params.get("dropout"),
+    ).to(device)
+
+    model.load_state_dict(trial.user_attrs.get("state"))
+
+    model_dir = pathlib.Path(PARENT / f"./models/{cwe_id.upper()}")
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.model")
+    param_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.json")
+
+    logger.info(f"Saving model to {model_path}")
+    torch.save(model.state_dict(), model_path)
+
+    logger.info(f"Saving params to {param_path}")
+    with open(param_path, "w") as f:
+        json.dump(trial.params, f)
