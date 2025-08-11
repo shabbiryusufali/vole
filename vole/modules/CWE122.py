@@ -12,8 +12,8 @@ PARENT = pathlib.Path(__file__).parent.resolve()
 class CWE122(Module):
     def __init__(self, project, cfg, device, embeddings):
         super().__init__(project, cfg, device, embeddings)
-        self.param_path = pathlib.Path(PARENT / "../models/CWE416/CWE416.json")
-        self.model_path = pathlib.Path(PARENT / "../models/CWE416/CWE416.model")
+        self.param_path = pathlib.Path(PARENT / "../models/CWE122/CWE122.json")
+        self.model_path = pathlib.Path(PARENT / "../models/CWE122/CWE122.model")
 
         with open(self.param_path, "r") as f:
             self.params = json.load(f)
