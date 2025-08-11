@@ -93,7 +93,7 @@ def main():
 
         if warn:
             for w in warn:
-                logger.warn(w)
+                logger.warning(w)
 
 
 if __name__ == "__main__":
