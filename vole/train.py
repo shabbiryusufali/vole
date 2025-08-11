@@ -51,7 +51,7 @@ def prepare_data_for_split(
     return split_data
 
 
-def do_training(model: GCN, optimizer) -> None:
+def do_training(model: GCN, optimizer, train_loader: DataLoader) -> None:
     model.train()
     for batch in train_loader:
         batch = batch.to(device)
@@ -62,7 +62,7 @@ def do_training(model: GCN, optimizer) -> None:
         optimizer.step()
 
 
-def do_testing(model: GCN) -> float:
+def do_testing(model: GCN, test_loader: DataLoader) -> float:
     correct = 0
     total = 0
 
@@ -98,9 +98,13 @@ def objective(trial):
     )
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
 
+    batch_size = trial.suggest_int("batch_size", 16, 256)
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+
     for epoch in range(100):
-        do_training(model, optimizer)
-        accuracy = do_testing(model)
+        do_training(model, optimizer, train_loader)
+        accuracy = do_testing(model, test_loader)
 
         trial.report(accuracy, epoch)
 
@@ -145,10 +149,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ir_embed = IREmbeddings(device, train=True)
 
-    # NOTE: `train_data` and `train_loader` accessed above
+    # NOTE: `train_data` accessed above
     logger.info("Preparing training data")
     train_data = prepare_data_for_split(train, ir_embed)
-    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+
+    # NOTE: `test_data` accessed above
+    logger.info("Preparing test data")
+    test_data = prepare_data_for_split(test, ir_embed)
 
     # NOTE: `criterion` accessed above
     labels = torch.cat([data.y for data in train_data]).to(device)
@@ -158,15 +165,9 @@ if __name__ == "__main__":
     ).to(device)
     criterion = torch.nn.CrossEntropyLoss(weight=weights).to(device)
 
-    # NOTE: `test_loader` accessed above
-    logger.info("Preparing test data")
-    test_data = prepare_data_for_split(test, ir_embed)
-    test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
-
     # Use optuna to maximize accuracy / parameters
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=100)
-
     trial = study.best_trial
     logger.info(f"Best trial completed with accuracy {trial.value:.4f}")
 
