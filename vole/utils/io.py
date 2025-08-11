@@ -16,7 +16,7 @@ def crawl(path: pathlib.Path, pattern: str) -> Iterator[pathlib.Path]:
 
 def get_corpus_splits(
     cwe_id: str, path: pathlib.Path
-) -> tuple[list, list]:
+) -> tuple[list | None, list | None]:
     """
     Reads in paths of test files from `path` corresponding to `cwe_id`,
     shuffles them, and returns a 50-50 train-test split
@@ -28,12 +28,15 @@ def get_corpus_splits(
         for c in crawl(m.parent, f"**/{cwe_id}*.o"):
             matches[c.name].append(c)
 
+    if not matches:
+        return None, None
+
     full = []
 
     # Second pass: randomly select 3 variants of each binary
     # NOTE: There are 18 variants for each!
-    for _, values in matches.items():
-        full.extend(random.sample(values, 3))
+    for variants in matches.values():
+        full.extend(random.sample(variants, 3))
 
     full = np.array(full)
     np.random.shuffle(full)
