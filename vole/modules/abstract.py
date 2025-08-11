@@ -27,9 +27,27 @@ class Module(ABC):
     def description(self):
         pass
 
-    def warn(self, func, addr: int) -> str:
-        return f"[{self.cwe_id}] ({self.cwe_name}) in {func.name} @ {hex(addr)}"
+    def warn(self, thing, addr: int) -> str:
+        if hasattr(thing, "name"):
+            return f"[{self.cwe_id}] ({self.cwe_name}) in {thing.name} @ {hex(addr)}"
+        else:
+            return f"[{self.cwe_id}] ({self.cwe_name}) @ {hex(addr)}"
 
-    @abstractmethod
-    def execute(self) -> tuple[dict, list[str]] | None:
-        pass
+    def execute(self) -> list[str]:
+        warns = []
+        for addr, embed in self.embeds.items():
+            embed.to(self.device)
+            out = self.model(embed.x, embed.edge_index)
+            preds = out.argmax(dim=1)
+
+            func = self.cfg.kb.functions.get(addr)
+            nodes = func.transition_graph.nodes()
+
+            if len(nodes) > 0:
+                assert len(nodes) == len(preds)
+
+                for node, pred in zip(nodes, preds):
+                    if pred == 1:
+                        warns.append(self.warn(node, node.addr))
+
+        return warns
