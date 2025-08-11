@@ -98,7 +98,7 @@ def objective(trial):
     )
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
 
-    batch_size = trial.suggest_int("batch_size", 16, 256)
+    batch_size = trial.suggest_int("batch_size", 32, 128)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
