@@ -1,3 +1,4 @@
+import math
 import torch
 import argparse
 import logging
@@ -81,8 +82,13 @@ def main():
     vulns = {}
 
     # Run each module and collect warnings + interesting addresses
+    modules_len = len(modules)
+    modules_digits = int(math.log10(modules_len)) + 1
+
     for idx, module in enumerate(modules):
-        logger.info(f"Running module {idx + 1}/{len(modules)}")
+        logger.info(
+            f"[{str(idx + 1).rjust(modules_digits)}/{modules_len}] Running module"
+        )
 
         module = module(project=proj, cfg=cfg, device=device, embeddings=embeds)
 
@@ -91,7 +97,10 @@ def main():
         if res:
             vuln, warn = res
             vulns.update(vuln)
-            warns.append(warn)
+            warns.extend(warn)
+
+    for warn in warns:
+        logger.warning(warn)
 
 
 if __name__ == "__main__":
