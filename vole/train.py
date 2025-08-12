@@ -31,22 +31,23 @@ PARENT = pathlib.Path(__file__).parent.resolve()
 def prepare_data_for_split(
     split: list[pathlib.Path], ir_embed: IREmbeddings
 ) -> list:
-    logger.info("Starting data preprocessing")
+    print("Starting data preprocessing", flush=True)
 
     split_data = []
     split_len = len(split)
     split_digits = int(math.log10(split_len)) + 1
 
     for idx, path in enumerate(split):
-        logger.info(
-            f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}"
+        print(
+            f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}",
+            flush=True
         )
 
         proj, cfg = get_project_cfg(path)
         embeddings = ir_embed.get_function_embeddings(proj, cfg)
         split_data.extend(embeddings.values())
 
-    logger.info("Data preprocessing complete")
+    print("Data preprocessing complete", flush=True)
 
     return split_data
 
@@ -133,11 +134,12 @@ if __name__ == "__main__":
 
     train, test = get_corpus_splits(cwe_id, path)
     if not all((train, test)):
-        logger.info(
+        print(
             f"""
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
             Check that `path` contains the compiled test cases.
-            """
+            """,
+            flush=True
         )
         sys.exit(1)
 
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     ir_embed = IREmbeddings(device, train=True)
 
     # NOTE: `train_data` and `train_loader` accessed above
-    logger.info("Preparing training data")
+    print("Preparing training data", flush=True)
     train_data = prepare_data_for_split(train, ir_embed)
     train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
 
@@ -159,7 +161,7 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss(weight=weights).to(device)
 
     # NOTE: `test_loader` accessed above
-    logger.info("Preparing test data")
+    print("Preparing test data", flush=True)
     test_data = prepare_data_for_split(test, ir_embed)
     test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
 
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=100)
 
     trial = study.best_trial
-    logger.info(f"Best trial completed with accuracy {trial.value:.4f}")
+    print(f"Best trial completed with accuracy {trial.value:.4f}", flush=True)
 
     # Recover best model
     model = GCN(
@@ -186,9 +188,9 @@ if __name__ == "__main__":
     model_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.model")
     param_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.json")
 
-    logger.info(f"Saving model to {model_path}")
+    print(f"Saving model to {model_path}", flush=True)
     torch.save(model.state_dict(), model_path)
 
-    logger.info(f"Saving params to {param_path}")
+    print(f"Saving params to {param_path}", flush=True)
     with open(param_path, "w") as f:
         json.dump(trial.params, f)
