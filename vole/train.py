@@ -139,6 +139,7 @@ if __name__ == "__main__":
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
             Check that `path` contains the compiled test cases.
             """,
+            file=sys.stderr,
             flush=True
         )
         sys.exit(1)
