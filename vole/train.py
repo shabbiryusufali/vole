@@ -21,8 +21,8 @@ logger.setLevel(logging.ERROR)
 logger = logging.getLogger("cle.loader")
 logger.setLevel(logging.ERROR)
 
-infolog = logging.getLogger(__name__)
-infolog.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 PARENT = pathlib.Path(__file__).parent.resolve()
@@ -40,16 +40,16 @@ def prepare_data_for_split(
     for idx, path in enumerate(split):
         print(
             f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}",
-            flush=True
+            flush=True,
         )
 
         proj, cfg = get_project_cfg(path)
         embeddings = ir_embed.get_function_embeddings(proj, cfg)
-        infolog.debug("extracted=%d from=%s", len(embeddings), path)
+        logger.debug("extracted=%d from=%s", len(embeddings), path)
         split_data.extend(embeddings.values())
 
     print("Data preprocessing complete", flush=True)
-    infolog.debug("total_graphs=%d", len(split_data))
+    logger.debug("total_graphs=%d", len(split_data))
 
     return split_data
 
@@ -101,18 +101,30 @@ def objective(trial):
     )
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
 
-    infolog.info(
+    logger.info(
         "trial=%d hidden=%d layers=%d dropout=%.4f lr=%.6f opt=%s",
-        trial.number, hidden_channels, num_layers, dropout, lr, optimizer_name
+        trial.number,
+        hidden_channels,
+        num_layers,
+        dropout,
+        lr,
+        optimizer_name,
     )
 
+    best_acc = accuracy
     for epoch in range(100):
         do_training(model, optimizer)
         accuracy = do_testing(model)
 
         if accuracy > best_acc:
             best_acc = accuracy
-        infolog.debug("trial=%d epoch=%d acc=%.4f best=%.4f", trial.number, epoch, accuracy, best_acc)
+        logger.debug(
+            "trial=%d epoch=%d acc=%.4f best=%.4f",
+            trial.number,
+            epoch,
+            accuracy,
+            best_acc,
+        )
 
         trial.report(accuracy, epoch)
 
@@ -151,7 +163,7 @@ if __name__ == "__main__":
             Check that `path` contains the compiled test cases.
             """,
             file=sys.stderr,
-            flush=True
+            flush=True,
         )
         sys.exit(1)
 
