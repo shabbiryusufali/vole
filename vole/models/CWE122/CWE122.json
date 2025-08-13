@@ -1,1 +1,1 @@
-{"hidden_channels": 112, "num_layers": 4, "dropout": 0.8351289762638607, "lr": 0.019197129931677413, "optimizer": "Adam"}
+{"hidden_channels": 48, "num_layers": 2, "dropout": 0.11755051973172644, "lr": 0.03918572459271942, "optimizer": "RMSprop"}
