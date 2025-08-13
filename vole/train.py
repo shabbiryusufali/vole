@@ -78,12 +78,12 @@ def do_testing(model: GCN) -> list[float]:
             pred = out.argmax(dim=1)
             true_positive = (pred == batch.y.view(-1) == 1).sum().item()
             true_negative = (pred == batch.y.view(-1) == 0).sum().item()
-            false_positive = (pred == 1) and (
+            false_positive = ((pred == 1) and (
                 batch.y.view(-1) == 0
-            ).sum().item()
-            false_negative = (pred == 0) and (
+            )).sum().item()
+            false_negative = ((pred == 0) and (
                 batch.y.view(-1) == 1
-            ).sum().item()
+            )).sum().item()
             precision_num += true_positive
             precision_denom += true_positive + false_positive
             recall_num += true_positive
