@@ -1,0 +1,1 @@
+Predictions: tensor([1, 1, 1,  ..., 1, 1, 1], device='cuda:0'), Labels: tensor([1, 1, 1,  ..., 0, 0, 0], device='cuda:0')

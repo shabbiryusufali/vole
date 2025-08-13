@@ -76,12 +76,13 @@ def do_testing(model: GCN) -> list[float]:
             batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
             pred = out.argmax(dim=1)
-            true_positive = (pred == batch.y.view(-1) == 1).sum().item()
-            true_negative = (pred == batch.y.view(-1) == 0).sum().item()
-            false_positive = ((pred == 1) and (
+            print(f"Predictions: {pred}, Labels: {batch.y.view(-1)}")
+            true_positive = ((pred == batch.y.view(-1) & pred == 1)).sum().item()
+            true_negative = ((pred == batch.y.view(-1) & pred == 0)).sum().item()
+            false_positive = ((pred == 1) & (
                 batch.y.view(-1) == 0
             )).sum().item()
-            false_negative = ((pred == 0) and (
+            false_negative = ((pred == 0) & (
                 batch.y.view(-1) == 1
             )).sum().item()
             precision_num += true_positive
