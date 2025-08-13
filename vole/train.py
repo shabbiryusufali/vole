@@ -69,7 +69,7 @@ def do_testing(model: GCN) -> list[float]:
     recall_num = 0
     recall_denom = 0
     total = 0
-    
+
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
@@ -84,7 +84,6 @@ def do_testing(model: GCN) -> list[float]:
             recall_num += true_positive
             recall_denom += true_positive + false_negative
             correct += true_positive + true_negative
-            # correct += (pred == batch.y.view(-1)).sum().item()
             pred = out.argmax(dim=1)
             total += batch.y.size(0)
 
@@ -119,15 +118,15 @@ def objective(trial):
         do_training(model, optimizer)
         [accuracy, precision, recall, f1_score] = do_testing(model)
 
-        trial.set_user_attr("epoch", epoch)
-        trial.set_user_attr("accuracy", accuracy)
-        trial.set_user_attr("precision", precision)
-        trial.set_user_attr("recall", recall)
-        trial.set_user_attr("f1_score", f1_score)
-        # trial.report(accuracy, epoch)
+        trial.report(accuracy, epoch)
 
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
+
+        trial.set_user_attr("epoch", epoch)
+        trial.set_user_attr("precision", precision)
+        trial.set_user_attr("recall", recall)
+        trial.set_user_attr("f1_score", f1_score)
 
     trial.set_user_attr("state", model.state_dict())
 
@@ -194,7 +193,9 @@ if __name__ == "__main__":
     best_precision = trial.user_attrs.get("precision")
     best_recall = trial.user_attrs.get("recall")
     best_f1_score = trial.user_attrs.get("f1_score")
-    logger.info(f"Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.")
+    logger.info(
+        f"Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}."
+    )
 
     # Recover best model
     model = GCN(
