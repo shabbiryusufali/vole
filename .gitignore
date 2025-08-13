@@ -7,6 +7,9 @@ venv-cpu/
 # Ignore the SARD dataset itself but not the download script!
 data/*
 
+# Ignore the log outputs
+output/*
+
 # Ignore big models (that should be installed by the end user)
 vole/models/cc.en.100.bin
 vole/models/cc.en.300.bin
