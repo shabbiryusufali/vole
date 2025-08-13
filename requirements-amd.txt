@@ -1,0 +1,6 @@
+pytorch-triton-rocm @ file:///home/schwarz/pytorch_triton_rocm-3.2.0%2Brocm6.4.2.git7e948ebf-cp312-cp312-linux_x86_64.whl#sha256=1afcda2bbef56589e678f96a2d7b433f8cfc19cb23b8deeb116e00805763ec7b
+sympy==1.13.1
+torch @ file:///home/schwarz/torch-2.6.0%2Brocm6.4.2.git76481f7c-cp312-cp312-linux_x86_64.whl#sha256=5cd40bf7a4ea0999fcae34f07f80a3af4970e09d76eac40c4efc48cbe812695c
+torchaudio @ file:///home/schwarz/torchaudio-2.6.0%2Brocm6.4.2.gitd8831425-cp312-cp312-linux_x86_64.whl#sha256=48f0e635ef6d5fbf6a787f6f14b923102b6c14da7a966662ba7ac2f4f9fa9201
+torchvision @ file:///home/schwarz/torchvision-0.21.0%2Brocm6.4.2.git4040d51f-cp312-cp312-linux_x86_64.whl#sha256=bcb9f85b88b39b58cd71dd8e9d3e7eb68d914044004a5ad07e5ed2291d512a10
+wheel==0.45.1
