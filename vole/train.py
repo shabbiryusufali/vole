@@ -76,25 +76,20 @@ def do_testing(model: GCN) -> tuple[float]:
             batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
             pred = out.argmax(dim=1)
-            print(f"Predictions: {pred}, Labels: {batch.y.view(-1)}")
             predictions = pred.view(-1).long()
             actuals = batch.y.view(-1).long()
+            
             true_positive = (predictions & actuals).sum().item()
             true_negative = ((predictions == 0) & (actuals == 0)).sum().item()
             false_positive = (predictions & (actuals == 0)).sum().item()
             false_negative = ((predictions == 0) & actuals).sum().item()
-            # true_positive = ((pred == batch.y.view(-1) & pred == 1)).sum().item()
-            # true_negative = ((pred == batch.y.view(-1) & pred == 0)).sum().item()
-            # false_positive = ((pred == 1) & (
-            #     batch.y.view(-1) == 0
-            # )).sum().item()
-            # false_negative = ((pred == 0) & (
-            #     batch.y.view(-1) == 1
-            # )).sum().item()
+            
             precision_num += true_positive
             precision_denom += true_positive + false_positive
+            
             recall_num += true_positive
             recall_denom += true_positive + false_negative
+            
             correct += true_positive + true_negative
             total += batch.y.size(0)
 
