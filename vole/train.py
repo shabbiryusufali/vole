@@ -62,20 +62,37 @@ def do_training(model: GCN, optimizer) -> None:
         optimizer.step()
 
 
-def do_testing(model: GCN) -> float:
+def do_testing(model: GCN) -> list[float]:
     correct = 0
+    precision_num = 0
+    precision_denom = 0
+    recall_num = 0
+    recall_denom = 0
     total = 0
-
+    
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
             batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
+            true_positive = (pred == batch.y.view(-1) == 1).sum().item()
+            true_negative = (pred == batch.y.view(-1) == 0).sum().item()
+            false_positive = (pred == 1) & (batch.y.view(-1) == 0).sum().item()
+            false_negative = (pred == 0) & (batch.y.view(-1) == 1).sum().item()
+            precision_num += true_positive
+            precision_denom += true_positive + false_positive
+            recall_num += true_positive
+            recall_denom += true_positive + false_negative
+            correct += true_positive + true_negative
+            # correct += (pred == batch.y.view(-1)).sum().item()
             pred = out.argmax(dim=1)
-            correct += (pred == batch.y.view(-1)).sum().item()
             total += batch.y.size(0)
 
-    return correct / total
+    accuracy = correct / total
+    precision = precision_num / precision_denom
+    recall = recall_num / recall_denom
+    f1_score = 2 * (precision * recall) / (precision + recall)
+    return [accuracy, precision, recall, f1_score]
 
 
 def objective(trial):
@@ -100,9 +117,14 @@ def objective(trial):
 
     for epoch in range(100):
         do_training(model, optimizer)
-        accuracy = do_testing(model)
+        [accuracy, precision, recall, f1_score] = do_testing(model)
 
-        trial.report(accuracy, epoch)
+        trial.set_user_attr("epoch", epoch)
+        trial.set_user_attr("accuracy", accuracy)
+        trial.set_user_attr("precision", precision)
+        trial.set_user_attr("recall", recall)
+        trial.set_user_attr("f1_score", f1_score)
+        # trial.report(accuracy, epoch)
 
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
@@ -168,7 +190,11 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=100)
 
     trial = study.best_trial
-    logger.info(f"Best trial completed with accuracy {trial.value:.4f}")
+    best_accuracy = trial.value
+    best_precision = trial.user_attrs.get("precision")
+    best_recall = trial.user_attrs.get("recall")
+    best_f1_score = trial.user_attrs.get("f1_score")
+    logger.info(f"Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.")
 
     # Recover best model
     model = GCN(
