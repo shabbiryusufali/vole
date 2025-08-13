@@ -15,7 +15,7 @@ def setup_fasttext_model():
     print("Reducing FastText model...")
     fasttext.util.reduce_model(ft, 100)
     print("Saving FastText model...")
-    ft.save_model(base_directory + "/vole/models/cc.en.100.bin")
+    ft.save_model(base_directory + "/src/models/cc.en.100.bin")
     print("Cleaning up FastText files...")
     os.remove("cc.en.300.bin")
     os.remove("cc.en.300.bin.gz")
