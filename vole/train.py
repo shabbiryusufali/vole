@@ -6,6 +6,8 @@ import optuna
 import logging
 import pathlib
 import argparse
+from datetime import datetime
+from time import perf_counter
 
 from utils.cfg import get_project_cfg
 from utils.embeddings import IREmbeddings
@@ -24,29 +26,38 @@ logger.setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
 PARENT = pathlib.Path(__file__).parent.resolve()
+START = perf_counter()
 
 
 def prepare_data_for_split(
     split: list[pathlib.Path], ir_embed: IREmbeddings
 ) -> list:
-    logger.info("Starting data preprocessing")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Starting data preprocessing",
+        flush=True,
+    )
 
     split_data = []
     split_len = len(split)
     split_digits = int(math.log10(split_len)) + 1
 
     for idx, path in enumerate(split):
-        logger.info(
-            f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}"
+        print(
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s "
+            f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}",
+            flush=True,
         )
 
         proj, cfg = get_project_cfg(path)
         embeddings = ir_embed.get_function_embeddings(proj, cfg)
+        logger.debug("extracted=%d from=%s", len(embeddings), path)
         split_data.extend(embeddings.values())
 
-    logger.info("Data preprocessing complete")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Data preprocessing complete",
+        flush=True,
+    )
 
     return split_data
 
@@ -78,18 +89,18 @@ def do_testing(model: GCN) -> tuple[float]:
             pred = out.argmax(dim=1)
             predictions = pred.view(-1).long()
             actuals = batch.y.view(-1).long()
-            
+
             true_positive = (predictions & actuals).sum().item()
             true_negative = ((predictions == 0) & (actuals == 0)).sum().item()
             false_positive = (predictions & (actuals == 0)).sum().item()
             false_negative = ((predictions == 0) & actuals).sum().item()
-            
+
             precision_num += true_positive
             precision_denom += true_positive + false_positive
-            
+
             recall_num += true_positive
             recall_denom += true_positive + false_negative
-            
+
             correct += true_positive + true_negative
             total += batch.y.size(0)
 
@@ -122,13 +133,40 @@ def objective(trial):
     )
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
 
+    logger.info(
+        "trial=%d hidden=%d layers=%d dropout=%.4f lr=%.6f opt=%s",
+        trial.number,
+        hidden_channels,
+        num_layers,
+        dropout,
+        lr,
+        optimizer_name,
+    )
+
+    best_acc = 0.0
     for epoch in range(100):
         do_training(model, optimizer)
         accuracy, precision, recall, f1_score = do_testing(model)
 
+        if accuracy > best_acc:
+            best_acc = accuracy
+        logger.debug(
+            "trial=%d epoch=%d acc=%.4f best=%.4f",
+            trial.number,
+            epoch,
+            accuracy,
+            best_acc,
+        )
+
         trial.report(accuracy, epoch)
 
         if trial.should_prune():
+            logger.info(
+                "trial=%d pruned_at_epoch=%d acc=%.4f",
+                trial.number,
+                epoch,
+                accuracy,
+            )
             raise optuna.exceptions.TrialPruned()
 
         trial.set_user_attr("precision", precision)
@@ -161,11 +199,14 @@ if __name__ == "__main__":
 
     train, test = get_corpus_splits(cwe_id, path)
     if not all((train, test)):
-        logger.info(
+        print(
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s "
             f"""
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
             Check that `path` contains the compiled test cases.
-            """
+            """,
+            file=sys.stderr,
+            flush=True,
         )
         sys.exit(1)
 
@@ -174,7 +215,10 @@ if __name__ == "__main__":
     ir_embed = IREmbeddings(device, train=True)
 
     # NOTE: `train_data` and `train_loader` accessed above
-    logger.info("Preparing training data")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Preparing training data",
+        flush=True,
+    )
     train_data = prepare_data_for_split(train, ir_embed)
     train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
 
@@ -187,7 +231,10 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss(weight=weights).to(device)
 
     # NOTE: `test_loader` accessed above
-    logger.info("Preparing test data")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Preparing test data",
+        flush=True,
+    )
     test_data = prepare_data_for_split(test, ir_embed)
     test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
 
@@ -196,12 +243,14 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=100)
 
     trial = study.best_trial
+
     best_accuracy = trial.value
     best_precision = trial.user_attrs.get("precision")
     best_recall = trial.user_attrs.get("recall")
     best_f1_score = trial.user_attrs.get("f1_score")
-    logger.info(
-        f"Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}."
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.",
+        flush=True,
     )
 
     # Recover best model
@@ -220,9 +269,15 @@ if __name__ == "__main__":
     model_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.model")
     param_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.json")
 
-    logger.info(f"Saving model to {model_path}")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Saving model to {model_path}",
+        flush=True,
+    )
     torch.save(model.state_dict(), model_path)
 
-    logger.info(f"Saving params to {param_path}")
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Saving params to {param_path}",
+        flush=True,
+    )
     with open(param_path, "w") as f:
         json.dump(trial.params, f)
