@@ -131,7 +131,6 @@ def objective(trial):
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
 
-        trial.set_user_attr("epoch", epoch)
         trial.set_user_attr("precision", precision)
         trial.set_user_attr("recall", recall)
         trial.set_user_attr("f1_score", f1_score)
