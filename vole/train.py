@@ -33,7 +33,10 @@ START = perf_counter()
 def prepare_data_for_split(
     split: list[pathlib.Path], ir_embed: IREmbeddings
 ) -> list:
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Starting data preprocessing", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Starting data preprocessing",
+        flush=True,
+    )
 
     split_data = []
     split_len = len(split)
@@ -41,7 +44,7 @@ def prepare_data_for_split(
 
     for idx, path in enumerate(split):
         print(
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s "
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s "
             f"[{str(idx + 1).rjust(split_digits)}/{split_len}] Processing path: {path}",
             flush=True,
         )
@@ -51,7 +54,10 @@ def prepare_data_for_split(
         logger.debug("extracted=%d from=%s", len(embeddings), path)
         split_data.extend(embeddings.values())
 
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Data preprocessing complete", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Data preprocessing complete",
+        flush=True,
+    )
 
     return split_data
 
@@ -131,7 +137,12 @@ def objective(trial):
         trial.report(accuracy, epoch)
 
         if trial.should_prune():
-            logger.info("trial=%d pruned_at_epoch=%d acc=%.4f", trial.number, epoch, accuracy)
+            logger.info(
+                "trial=%d pruned_at_epoch=%d acc=%.4f",
+                trial.number,
+                epoch,
+                accuracy,
+            )
             raise optuna.exceptions.TrialPruned()
 
     trial.set_user_attr("state", model.state_dict())
@@ -161,7 +172,7 @@ if __name__ == "__main__":
     train, test = get_corpus_splits(cwe_id, path)
     if not all((train, test)):
         print(
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s "
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s "
             f"""
             CWE-ID `{cwe_id}` and path `{path}` yielded no results.
             Check that `path` contains the compiled test cases.
@@ -176,7 +187,10 @@ if __name__ == "__main__":
     ir_embed = IREmbeddings(device, train=True)
 
     # NOTE: `train_data` and `train_loader` accessed above
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Preparing training data", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Preparing training data",
+        flush=True,
+    )
     train_data = prepare_data_for_split(train, ir_embed)
     train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
 
@@ -189,7 +203,10 @@ if __name__ == "__main__":
     criterion = torch.nn.CrossEntropyLoss(weight=weights).to(device)
 
     # NOTE: `test_loader` accessed above
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Preparing test data", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Preparing test data",
+        flush=True,
+    )
     test_data = prepare_data_for_split(test, ir_embed)
     test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
 
@@ -198,7 +215,10 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=100)
 
     trial = study.best_trial
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Best trial completed with accuracy {trial.value:.4f}", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}",
+        flush=True,
+    )
 
     # Recover best model
     model = GCN(
@@ -216,9 +236,15 @@ if __name__ == "__main__":
     model_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.model")
     param_path = pathlib.Path(model_dir / f"{cwe_id.upper()}.json")
 
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Saving model to {model_path}", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Saving model to {model_path}",
+        flush=True,
+    )
     torch.save(model.state_dict(), model_path)
 
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter()-START:.1f}s Saving params to {param_path}", flush=True)
+    print(
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Saving params to {param_path}",
+        flush=True,
+    )
     with open(param_path, "w") as f:
         json.dump(trial.params, f)
