@@ -124,7 +124,7 @@ def objective(trial):
 
     for epoch in range(100):
         do_training(model, optimizer)
-        [accuracy, precision, recall, f1_score] = do_testing(model)
+        accuracy, precision, recall, f1_score = do_testing(model)
 
         trial.report(accuracy, epoch)
 
