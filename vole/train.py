@@ -77,7 +77,7 @@ def do_testing(model: GCN) -> list[float]:
             out = model(batch.x, batch.edge_index)
             true_positive = (pred == batch.y.view(-1) == 1).sum().item()
             true_negative = (pred == batch.y.view(-1) == 0).sum().item()
-            false_positive = (pred == 1) & (batch.y.view(-1) == 0).sum().item()
+            false_positive = ((pred == 1) & (batch.y.view(-1) == 0)).sum().item()
             false_negative = (pred == 0) & (batch.y.view(-1) == 1).sum().item()
             precision_num += true_positive
             precision_denom += true_positive + false_positive
