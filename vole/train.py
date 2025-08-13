@@ -89,18 +89,18 @@ def do_testing(model: GCN) -> tuple[float]:
             pred = out.argmax(dim=1)
             predictions = pred.view(-1).long()
             actuals = batch.y.view(-1).long()
-            
+
             true_positive = (predictions & actuals).sum().item()
             true_negative = ((predictions == 0) & (actuals == 0)).sum().item()
             false_positive = (predictions & (actuals == 0)).sum().item()
             false_negative = ((predictions == 0) & actuals).sum().item()
-            
+
             precision_num += true_positive
             precision_denom += true_positive + false_positive
-            
+
             recall_num += true_positive
             recall_denom += true_positive + false_negative
-            
+
             correct += true_positive + true_negative
             total += batch.y.size(0)
 
@@ -249,9 +249,8 @@ if __name__ == "__main__":
     best_recall = trial.user_attrs.get("recall")
     best_f1_score = trial.user_attrs.get("f1_score")
     print(
-        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}, 
-          precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.",
-          flush=True,
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}, precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.",
+        flush=True,
     )
 
     # Recover best model
