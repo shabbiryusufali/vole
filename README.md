@@ -22,7 +22,7 @@ VOLE is a tool for detecting common bug classes in program binaries. It leverage
 
 - [Docker](https://www.docker.com/)
 - [CUDA 12.9+ (NVIDIA GPUs)](https://developer.nvidia.com/cuda-downloads)
-- [ROCm 6.4+ (AMD GPUs)](https://rocm.docs.amd.com/en/latest/) - While ROCm can work, ROCm is not officially supported. Only use if you have ROCm pre-installed. 
+- [ROCm 6.4+ (AMD GPUs)](https://rocm.docs.amd.com/en/latest/) - While ROCm may work, it is not officially supported. Only use if you have ROCm pre-installed.
 
 ### Installation and Setup
 
