@@ -75,22 +75,28 @@ def do_testing(model: GCN) -> list[float]:
         for batch in test_loader:
             batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
+            pred = out.argmax(dim=1)
             true_positive = (pred == batch.y.view(-1) == 1).sum().item()
             true_negative = (pred == batch.y.view(-1) == 0).sum().item()
-            false_positive = ((pred == 1) & (batch.y.view(-1) == 0)).sum().item()
-            false_negative = ((pred == 0) & (batch.y.view(-1) == 1)).sum().item()
+            false_positive = (pred == 1) and (
+                batch.y.view(-1) == 0
+            ).sum().item()
+            false_negative = (pred == 0) and (
+                batch.y.view(-1) == 1
+            ).sum().item()
             precision_num += true_positive
             precision_denom += true_positive + false_positive
             recall_num += true_positive
             recall_denom += true_positive + false_negative
             correct += true_positive + true_negative
-            pred = out.argmax(dim=1)
             total += batch.y.size(0)
 
-    accuracy = correct / total
-    precision = precision_num / precision_denom
-    recall = recall_num / recall_denom
-    f1_score = 2 * (precision * recall) / (precision + recall)
+    accuracy = (correct / total) if total > 0 else 0
+    precision = (precision_num / precision_denom) if precision_denom > 0 else 0
+    recall = (recall_num / recall_denom) if recall_denom > 0 else 0
+    f1_score = 0
+    if precision + recall != 0:
+        f1_score = 2 * (precision * recall) / (precision + recall)
     return [accuracy, precision, recall, f1_score]
 
 
