@@ -99,7 +99,7 @@ def do_testing(model: GCN) -> tuple[float]:
     f1_score = 0
     if precision + recall != 0:
         f1_score = 2 * (precision * recall) / (precision + recall)
-    return [accuracy, precision, recall, f1_score]
+    return accuracy, precision, recall, f1_score
 
 
 def objective(trial):
