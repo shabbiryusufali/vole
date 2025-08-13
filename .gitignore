@@ -11,8 +11,8 @@ data/*
 output/*
 
 # Ignore big models (that should be installed by the end user)
-vole/models/cc.en.100.bin
-vole/models/cc.en.300.bin
+src/models/cc.en.100.bin
+src/models/cc.en.300.bin
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
