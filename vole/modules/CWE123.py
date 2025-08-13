@@ -41,4 +41,6 @@ class CWE123(Module):
 
     @property
     def description(self):
-        return "An attacker can write any desired value to any location in memory."
+        return (
+            "An attacker can write any desired value to any location in memory."
+        )
