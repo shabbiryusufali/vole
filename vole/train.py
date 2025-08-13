@@ -62,7 +62,7 @@ def do_training(model: GCN, optimizer) -> None:
         optimizer.step()
 
 
-def do_testing(model: GCN) -> list[float]:
+def do_testing(model: GCN) -> tuple[float]:
     correct = 0
     precision_num = 0
     precision_denom = 0
