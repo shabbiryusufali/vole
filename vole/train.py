@@ -73,8 +73,12 @@ def do_training(model: GCN, optimizer) -> None:
         optimizer.step()
 
 
-def do_testing(model: GCN) -> float:
+def do_testing(model: GCN) -> tuple[float]:
     correct = 0
+    precision_num = 0
+    precision_denom = 0
+    recall_num = 0
+    recall_denom = 0
     total = 0
 
     model.eval()
@@ -83,10 +87,30 @@ def do_testing(model: GCN) -> float:
             batch = batch.to(device)
             out = model(batch.x, batch.edge_index)
             pred = out.argmax(dim=1)
-            correct += (pred == batch.y.view(-1)).sum().item()
+            predictions = pred.view(-1).long()
+            actuals = batch.y.view(-1).long()
+            
+            true_positive = (predictions & actuals).sum().item()
+            true_negative = ((predictions == 0) & (actuals == 0)).sum().item()
+            false_positive = (predictions & (actuals == 0)).sum().item()
+            false_negative = ((predictions == 0) & actuals).sum().item()
+            
+            precision_num += true_positive
+            precision_denom += true_positive + false_positive
+            
+            recall_num += true_positive
+            recall_denom += true_positive + false_negative
+            
+            correct += true_positive + true_negative
             total += batch.y.size(0)
 
-    return correct / total
+    accuracy = (correct / total) if total > 0 else 0
+    precision = (precision_num / precision_denom) if precision_denom > 0 else 0
+    recall = (recall_num / recall_denom) if recall_denom > 0 else 0
+    f1_score = 0
+    if precision + recall != 0:
+        f1_score = 2 * (precision * recall) / (precision + recall)
+    return accuracy, precision, recall, f1_score
 
 
 def objective(trial):
@@ -122,7 +146,7 @@ def objective(trial):
     best_acc = 0.0
     for epoch in range(100):
         do_training(model, optimizer)
-        accuracy = do_testing(model)
+        accuracy, precision, recall, f1_score = do_testing(model)
 
         if accuracy > best_acc:
             best_acc = accuracy
@@ -144,6 +168,10 @@ def objective(trial):
                 accuracy,
             )
             raise optuna.exceptions.TrialPruned()
+
+        trial.set_user_attr("precision", precision)
+        trial.set_user_attr("recall", recall)
+        trial.set_user_attr("f1_score", f1_score)
 
     trial.set_user_attr("state", model.state_dict())
 
@@ -215,9 +243,15 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=100)
 
     trial = study.best_trial
+
+    best_accuracy = trial.value
+    best_precision = trial.user_attrs.get("precision")
+    best_recall = trial.user_attrs.get("recall")
+    best_f1_score = trial.user_attrs.get("f1_score")
     print(
-        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}",
-        flush=True,
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} +{perf_counter() - START:.1f}s Best trial completed with accuracy {trial.value:.4f}, 
+          precision {best_precision:.4f}, recall {best_recall:.4f}, and F1-Score {best_f1_score:.4f}.",
+          flush=True,
     )
 
     # Recover best model

@@ -9,11 +9,11 @@ from torch_geometric.nn.models import GCN
 PARENT = pathlib.Path(__file__).parent.resolve()
 
 
-class CWE123(Module):
+class CWE832(Module):
     def __init__(self, project, cfg, device, embeddings):
         super().__init__(project, cfg, device, embeddings)
-        self.param_path = pathlib.Path(PARENT / "../models/CWE123/CWE123.json")
-        self.model_path = pathlib.Path(PARENT / "../models/CWE123/CWE123.model")
+        self.param_path = pathlib.Path(PARENT / "../models/CWE832/CWE832.json")
+        self.model_path = pathlib.Path(PARENT / "../models/CWE832/CWE832.model")
 
         with open(self.param_path, "r") as f:
             self.params = json.load(f)
@@ -33,14 +33,12 @@ class CWE123(Module):
 
     @property
     def cwe_id(self):
-        return "CWE123"
+        return "CWE832"
 
     @property
     def cwe_name(self):
-        return "Write-What-Where Condition"
+        return "Unlock of a Resource that is not Locked"
 
     @property
     def description(self):
-        return (
-            "An attacker can write any desired value to any location in memory."
-        )
+        return "Unlocking a resource that was never locked."

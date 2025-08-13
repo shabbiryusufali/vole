@@ -9,11 +9,11 @@ from torch_geometric.nn.models import GCN
 PARENT = pathlib.Path(__file__).parent.resolve()
 
 
-class CWE123(Module):
+class CWE121(Module):
     def __init__(self, project, cfg, device, embeddings):
         super().__init__(project, cfg, device, embeddings)
-        self.param_path = pathlib.Path(PARENT / "../models/CWE123/CWE123.json")
-        self.model_path = pathlib.Path(PARENT / "../models/CWE123/CWE123.model")
+        self.param_path = pathlib.Path(PARENT / "../models/CWE121/CWE121.json")
+        self.model_path = pathlib.Path(PARENT / "../models/CWE121/CWE121.model")
 
         with open(self.param_path, "r") as f:
             self.params = json.load(f)
@@ -33,14 +33,12 @@ class CWE123(Module):
 
     @property
     def cwe_id(self):
-        return "CWE123"
+        return "CWE121"
 
     @property
     def cwe_name(self):
-        return "Write-What-Where Condition"
+        return "Stack-based Buffer Overflow"
 
     @property
     def description(self):
-        return (
-            "An attacker can write any desired value to any location in memory."
-        )
+        return "Writing to memory outside of stack-allocated buffer."
