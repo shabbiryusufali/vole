@@ -21,8 +21,8 @@ jobs:
         run: pip install bandit[toml]
 
       - name: Run Bandit
-        run: bandit -c pyproject.toml -r . -f txt -o results.txt || true
-      
+        run: bandit -c pyproject.toml -r . -f txt -o results.txt
+
       - name: Upload Bandit results
         uses: actions/upload-artifact@v4
         with:

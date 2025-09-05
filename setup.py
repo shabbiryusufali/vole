@@ -32,7 +32,9 @@ def setup_SARD_dataset():
 
     zip_path = os.path.join(directory, "juliet-test-suite.zip")
     print(f"Downloading SARD dataset from {url}...")
-    urllib.request.urlretrieve(url, zip_path)
+
+    # NOTE: Only accesses via HTTPS protocol
+    urllib.request.urlretrieve(url, zip_path)  # nosec B310
 
     print("Extracting SARD dataset...")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:

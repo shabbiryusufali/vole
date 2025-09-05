@@ -44,7 +44,8 @@ class Module(ABC):
             nodes = func.transition_graph.nodes()
 
             if len(nodes) > 0:
-                assert len(nodes) == len(preds)
+                # NOTE: Not compiling to optimized byte code
+                assert len(nodes) == len(preds)  # nosec B101
 
                 for node, pred in zip(nodes, preds):
                     if pred == 1:
