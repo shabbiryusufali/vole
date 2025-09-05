@@ -1,7 +1,9 @@
 import shutil
 import pathlib
 import argparse
-import subprocess
+
+# NOTE: `subprocess` is not inherently insecure
+import subprocess  # nosec B404
 
 
 COMPILERS = [
@@ -33,6 +35,7 @@ def make(cwe_id: str, path: str) -> None:
             cc_dir.mkdir(parents=True, exist_ok=True)
 
             for opt in OPTS:
+                # NOTE: Only ever running on trusted input
                 subprocess.run(
                     [
                         "make",
@@ -43,7 +46,7 @@ def make(cwe_id: str, path: str) -> None:
                         f"CPP={cpp}",
                         f"CFLAGS=-c -{opt}",
                     ]
-                )
+                )  # nosec B603, B607
 
                 # Create nested subfolder for each optimization used
                 opt_dir = pathlib.Path(cc_dir / f"{opt}")
@@ -64,7 +67,8 @@ def clean(cwe_id: str, path: str) -> None:
 
     for makefile in path.rglob(makefile_pattern):
         parent = makefile.parent
-        subprocess.run(["make", "clean", "-C", parent])
+        # NOTE: Only ever running on trusted input
+        subprocess.run(["make", "clean", "-C", parent])  # nosec B603, B607
 
         for cc, cpp in COMPILERS:
             cc_dir = pathlib.Path(parent / f"{cc}_{cpp}")

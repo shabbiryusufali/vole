@@ -67,9 +67,11 @@ class IREmbeddings:
         # Patch the resolution of the model's source at runtime
         sys.modules["model_OTA"] = utils.vexir2vec.model_OTA
 
+        # NOTE: Unsafe PyTorch load (of VEXIR2Vec) but we are accept that risk
+        # NOTE: See https://github.com/IITH-Compilers/VexIR2Vec/blob/main/embeddings/vexNet/vexir2vec.model
         self.vexir2vec = torch.load(
             self.model, map_location=self.device, weights_only=False
-        )
+        )  # nosec B614
         self.vexir2vec.eval()
 
     def get_function_embeddings(
@@ -302,18 +304,19 @@ class EmbeddingsWrapper(SymbolicEmbeddings):
         for i, token in enumerate(tokens):
             replace_token = token
             try:
+                # NOTE: The following B105's are false positives
                 if i == 1:
                     if func_flag is True:
-                        replace_token = "function"
+                        replace_token = "function"  # nosec B105
                     elif puti_flag is True:
-                        replace_token = "r1234"
+                        replace_token = "r1234"  # nosec B105
                 elif i == 2:
                     if geti_flag is True:
-                        replace_token = "r1234"
+                        replace_token = "r1234"  # nosec B105
                     elif puti_flag is True:
-                        replace_token = "remove"
+                        replace_token = "remove"  # nosec B105
                 elif i == 3 and geti_flag is True:
-                    replace_token = "remove"
+                    replace_token = "remove"  # nosec B105
 
                 new_stmt = new_stmt.replace(
                     token, self.keywords.getKeyword(replace_token), 1
