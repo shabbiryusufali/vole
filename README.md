@@ -59,8 +59,8 @@ From the root directory of the repository:
 
 1. (Optional) Build the Docker image with `docker build -t sard-env:latest .`
 2. Compile the target CWEs per CWE-ID by running:
-    a. Bare metal: `python src/make.py CWE<ID> data/SARD`
-    b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 src/make.py CWE<ID> data/SARD`
+    1. Bare metal: `python src/make.py CWE<ID> data/SARD`
+    2. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 src/make.py CWE<ID> data/SARD`
 
 ### Contributing Changes
 
