@@ -1,5 +1,8 @@
 <h1 align="center">VOLE (Vulnerability Observance and Learning-based Exploitation)</h1>
 
+[![Check Formatting](https://github.com/shabbiryusufali/vole/actions/workflows/check-formatting.yml/badge.svg)](https://github.com/shabbiryusufali/vole/actions/workflows/check-formatting.yml)
+[![Run Bandit](https://github.com/shabbiryusufali/vole/actions/workflows/run-bandit.yml/badge.svg)](https://github.com/shabbiryusufali/vole/actions/workflows/run-bandit.yml)
+
 VOLE is a tool for detecting common bug classes in program binaries. It leverages:
 
 - [angr](https://github.com/angr/angr) for symbolic execution, control-flow graph (CFG) recovery, and intermediate representation (IR) lifting
@@ -56,16 +59,16 @@ From the root directory of the repository:
 
 1. (Optional) Build the Docker image with `docker build -t sard-env:latest .`
 2. Compile the target CWEs per CWE-ID by running:
-  a. Bare metal: `python src/make.py CWE<ID> data/SARD`
-  b. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 src/make.py CWE<ID> data/SARD`
+    1. Bare metal: `python src/make.py CWE<ID> data/SARD`
+    2. Docker: `docker run -it --rm -v "$PWD":/usr/src/env -w /usr/src/env sard-env python3 src/make.py CWE<ID> data/SARD`
 
 ### Contributing Changes
 
 1. Before starting work, ensure your local repo is up to date!
 2. When assigned an issue, create a new branch for the issue by:
-  1. Going to the "Development" tab
-  2. Selecting "Create a branch"
-  3. Clicking "Create branch" 
-  4. Checking out the new branch locally
+    1. Going to the "Development" tab
+    2. Selecting "Create a branch"
+    3. Clicking "Create branch" 
+    4. Checking out the new branch locally
 3. Do what you need to do
-4. Before pushing changes, run `ruff format .` to format them (no ugly code, sorry)
+4. Before pushing changes, run `ruff format .` and `ruff check --fix .` to lint and format them
